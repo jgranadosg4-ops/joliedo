@@ -78,6 +78,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .check-overlay { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: var(--bg); display: flex; align-items: center; justify-content: center; }
 .cart-item.bought .check-overlay { background: var(--teal); border-color: var(--teal); }
 .cart-empty { padding: 20px 14px; text-align: center; color: var(--text2); font-size: 13px; grid-column: 1/-1; }
+.cart-tienda-lbl { font-size: 10px; color: var(--text2); text-align: center; margin-top: 1px; }
 
 /* BOTÓN FINALIZAR */
 .fin-wrap { padding: 4px 12px 14px; }
@@ -472,7 +473,7 @@ async function loadTiendas() {
   try {
     tiendas = await supaFetch('jd_tiendas?order=orden');
     const sel = document.getElementById('store-select');
-    sel.innerHTML = '<option value="">— Elige una tienda —</option>';
+    sel.innerHTML = '<option value="">— Elige una tienda —</option><option value="todas">🛒 Todas las tiendas</option>';
     tiendas.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
@@ -486,11 +487,29 @@ async function onStoreChange() {
   const sel = document.getElementById('store-select');
   currentTiendaId = sel.value;
   if (!currentTiendaId) return;
+  if (currentTiendaId === 'todas') {
+    document.getElementById('store-label').textContent = 'Todas';
+    document.getElementById('cat-store-label').textContent = '';
+    // Colapsar catálogo, solo mostrar carrito filtrado
+    const bodyC = document.getElementById('body-catalogo');
+    const chevC = document.getElementById('chev-catalogo');
+    bodyC.classList.add('hidden');
+    chevC.classList.remove('open');
+    renderCart();
+    toggleSec('tienda');
+    return;
+  }
   const tienda = tiendas.find(t => t.id === currentTiendaId);
   document.getElementById('store-label').textContent = tienda ? tienda.nombre : '';
   document.getElementById('cat-store-label').textContent = tienda ? tienda.nombre : '';
+  // Asegurar catálogo visible
+  const bodyC = document.getElementById('body-catalogo');
+  const chevC = document.getElementById('chev-catalogo');
+  bodyC.classList.remove('hidden');
+  chevC.classList.add('open');
   toggleSec('tienda');
   await loadCatalogo(currentTiendaId);
+  renderCart();
 }
 
 async function loadCatalogo(tiendaId) {
@@ -527,7 +546,7 @@ function renderCatalogo() {
 
 function addToCart(id, emoji, nombre) {
   if (cart[id] !== undefined) return;
-  cart[id] = { emoji: emoji || '🛒', nombre };
+  cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: currentTiendaId };
   cartBought[id] = false;
   const el = document.getElementById('ci-' + id);
   if (el) el.classList.add('gone');
@@ -542,20 +561,32 @@ function toggleBought(id) {
 
 function renderCart() {
   const grid = document.getElementById('cart-grid');
-  const keys = Object.keys(cart);
-  document.getElementById('cart-count').textContent = keys.length;
-  if (keys.length === 0) {
+  const allKeys = Object.keys(cart);
+  // Filtrar por tienda seleccionada
+  const keys = currentTiendaId === 'todas'
+    ? allKeys
+    : allKeys.filter(id => cart[id].tiendaId === currentTiendaId);
+  document.getElementById('cart-count').textContent = allKeys.length;
+  if (allKeys.length === 0) {
     grid.innerHTML = '<div class="cart-empty">Toca productos del catálogo para agregarlos</div>';
     document.getElementById('fin-wrap').classList.add('hidden');
     return;
   }
+  if (keys.length === 0) {
+    grid.innerHTML = `<div class="cart-empty">No hay productos de esta tienda en el carrito</div>`;
+    document.getElementById('fin-wrap').classList.add('hidden');
+    return;
+  }
+  const mostrarTienda = currentTiendaId === 'todas';
   grid.innerHTML = keys.map(id => {
     const item = cart[id];
     const bought = cartBought[id];
+    const tiendaNombre = mostrarTienda ? (tiendas.find(t => t.id === item.tiendaId)?.nombre || '') : '';
     return `<div class="cart-item${bought ? ' bought' : ''}" onclick="toggleBought('${id}')">
       <div class="check-overlay">${bought ? '✓' : ''}</div>
       <div class="cat-emoji">${item.emoji}</div>
       <div class="cat-name">${item.nombre}</div>
+      ${mostrarTienda ? `<div class="cart-tienda-lbl">${tiendaNombre}</div>` : ''}
     </div>`;
   }).join('');
   document.getElementById('fin-wrap').classList.remove('hidden');
@@ -774,8 +805,20 @@ async function toggleRecurrente(id, el) {
       body: JSON.stringify({ recurrente_activa: isOn })
     });
     const t = recurrentes.find(r => r.id === id);
-    if (t) t.recurrente_activa = isOn;
-  } catch(e) {}
+    if (t) {
+      t.recurrente_activa = isOn;
+      if (isOn) {
+        // Agregar a tareas activas si no está ya
+        if (!tareas.find(x => x.id === id)) {
+          tareas.push({ ...t, es_recurrente: false });
+        }
+      } else {
+        // Quitar de tareas activas
+        tareas = tareas.filter(x => x.id !== id);
+      }
+      renderTareas();
+    }
+  } catch(e) { showToast('Error al actualizar', true); }
 }
 
 // MODAL NUEVA TAREA

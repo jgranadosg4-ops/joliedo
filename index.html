@@ -545,24 +545,36 @@ function renderCatalogo() {
 
 async function addToCart(id, emoji, nombre) {
   if (cart[id] !== undefined) return;
-  // Crear carrito activo en Supabase si no existe
-  if (!carritoActivoId) {
+  // Usar la tienda del producto, no currentTiendaId (que puede ser "todas")
+  const tiendaDelProducto = currentTiendaId !== 'todas' ? currentTiendaId : null;
+  if (!tiendaDelProducto) { showToast('Selecciona una tienda específica primero', true); return; }
+
+  // Buscar si ya hay un carrito activo para esta tienda
+  let carritoId = carritoActivoId;
+  if (!carritoId) {
     try {
-      const c = await supaFetch('jd_carritos', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ tienda_id: currentTiendaId, status: 'activo' })
-      });
-      carritoActivoId = c[0].id;
+      // Buscar carrito activo existente para esta tienda
+      const existing = await supaFetch(`jd_carritos?status=eq.activo&tienda_id=eq.${tiendaDelProducto}&limit=1`);
+      if (existing && existing.length > 0) {
+        carritoId = existing[0].id;
+      } else {
+        const c = await supaFetch('jd_carritos', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({ tienda_id: tiendaDelProducto, status: 'activo' })
+        });
+        carritoId = c[0].id;
+      }
+      carritoActivoId = carritoId;
     } catch(e) { showToast('Error al crear carrito', true); return; }
   }
   try {
     const item = await supaFetch('jd_carrito_items', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ carrito_id: carritoActivoId, producto_id: id, comprado: false })
+      body: JSON.stringify({ carrito_id: carritoId, producto_id: id, comprado: false })
     });
-    cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: currentTiendaId, itemId: item[0].id };
+    cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: tiendaDelProducto, itemId: item[0].id };
     cartBought[id] = false;
     const el = document.getElementById('ci-' + id);
     if (el) el.classList.add('gone');
@@ -588,23 +600,29 @@ async function toggleBought(id) {
 
 async function loadCarritoActivo() {
   try {
-    const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc&limit=1');
+    const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc');
     if (!carritos || carritos.length === 0) return;
-    const carrito = carritos[0];
-    carritoActivoId = carrito.id;
-    currentTiendaId = carrito.tienda_id;
-    const items = await supaFetch(`jd_carrito_items?carrito_id=eq.${carritoActivoId}&select=*,jd_productos(nombre,emoji,tienda_id)`);
+    // Cargar items de todos los carritos activos
+    const carritoIds = carritos.map(c => c.id);
+    const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji,tienda_id)`);
     if (!items || items.length === 0) return;
+    // Mapear carritoId → tiendaId
+    const carritoTienda = {};
+    carritos.forEach(c => { carritoTienda[c.id] = c.tienda_id; });
     items.forEach(item => {
       const prod = item.jd_productos;
       if (!prod) return;
-      cart[item.producto_id] = { emoji: prod.emoji || '🛒', nombre: prod.nombre, tiendaId: prod.tienda_id, itemId: item.id };
+      cart[item.producto_id] = {
+        emoji: prod.emoji || '🛒',
+        nombre: prod.nombre,
+        tiendaId: carritoTienda[item.carrito_id] || prod.tienda_id,
+        itemId: item.id,
+        carritoId: item.carrito_id
+      };
       cartBought[item.producto_id] = item.comprado || false;
     });
-    const sel = document.getElementById('store-select');
-    if (sel) sel.value = currentTiendaId;
-    document.getElementById('store-label').textContent = tiendas.find(t => t.id === currentTiendaId)?.nombre || '';
-    await loadCatalogo(currentTiendaId);
+    // Usar el carrito más reciente como activo
+    carritoActivoId = carritos[0].id;
     renderCart();
     if (Object.keys(cart).length > 0) showToast('🛒 Carrito restaurado');
   } catch(e) {}
@@ -1024,12 +1042,9 @@ function toggleCatHist(id) {
 }
 
 function addProductoAlCarrito(id, nombre, emoji) {
-  if (!currentTiendaId) {
-    showToast('Primero selecciona una tienda en Compras', true);
-    return;
-  }
   if (cart[id] !== undefined) { showToast('Ya está en el carrito'); return; }
-  cart[id] = { emoji, nombre };
+  // Solo agregar a memoria local — se persistirá cuando el usuario entre a Compras y seleccione tienda
+  cart[id] = { emoji, nombre, tiendaId: null, itemId: null };
   cartBought[id] = false;
   renderCart();
   setTab('compras', document.querySelector('.tab'));
@@ -1051,9 +1066,9 @@ function escapar(str) {
 
 // ---- INIT ----
 async function init() {
-  await loadTiendas();
-  await loadTareas();
-  await loadCarritoActivo();
+  try { await loadTiendas(); } catch(e) {}
+  try { await loadTareas(); } catch(e) {}
+  try { await loadCarritoActivo(); } catch(e) {}
 }
 
 init();

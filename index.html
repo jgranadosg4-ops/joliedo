@@ -421,17 +421,16 @@ const SUPABASE_KEY = 'sb_publishable_ae61QVnxB7wqf9hsbh02eQ_YJ_ufc67';
 // ---- STATE ----
 let tiendas = [];
 let productos = {};      // { tienda_id: [...] }
-let cart = {};           // { producto_id: { emoji, nombre } }
+let cart = {};           // { producto_id: { emoji, nombre, tiendaId, itemId } }
 let cartBought = {};     // { producto_id: true }
+let carritoActivoId = null;  // ID del carrito activo en Supabase
 let currentTiendaId = null;
-let tareas = [];         // pendientes activos
-let recurrentes = [];    // tareas recurrentes
-let completadas = [];    // completadas en esta sesión
+let tareas = [];
+let recurrentes = [];
+let completadas = [];
 let currentTaskCat = 'trabajo';
 let selectedEmoji = '🛒';
 let currentFilter = 'todos';
-let historialCompras = [];
-let historialActividades = [];
 let currentSubHist = 'compras-hist';
 
 // ---- SUPABASE ----
@@ -544,19 +543,71 @@ function renderCatalogo() {
   grid.appendChild(addDiv);
 }
 
-function addToCart(id, emoji, nombre) {
+async function addToCart(id, emoji, nombre) {
   if (cart[id] !== undefined) return;
-  cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: currentTiendaId };
-  cartBought[id] = false;
-  const el = document.getElementById('ci-' + id);
-  if (el) el.classList.add('gone');
-  renderCart();
+  // Crear carrito activo en Supabase si no existe
+  if (!carritoActivoId) {
+    try {
+      const c = await supaFetch('jd_carritos', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ tienda_id: currentTiendaId, status: 'activo' })
+      });
+      carritoActivoId = c[0].id;
+    } catch(e) { showToast('Error al crear carrito', true); return; }
+  }
+  try {
+    const item = await supaFetch('jd_carrito_items', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ carrito_id: carritoActivoId, producto_id: id, comprado: false })
+    });
+    cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: currentTiendaId, itemId: item[0].id };
+    cartBought[id] = false;
+    const el = document.getElementById('ci-' + id);
+    if (el) el.classList.add('gone');
+    renderCart();
+  } catch(e) { showToast('Error al agregar al carrito', true); }
 }
 
-function toggleBought(id) {
+async function toggleBought(id) {
   if (cart[id] === undefined) return;
-  cartBought[id] = !cartBought[id];
+  const newVal = !cartBought[id];
+  cartBought[id] = newVal;
   renderCart();
+  try {
+    const itemId = cart[id].itemId;
+    if (itemId) {
+      await supaFetch(`jd_carrito_items?id=eq.${itemId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ comprado: newVal, fecha_comprado: newVal ? new Date().toISOString() : null })
+      });
+    }
+  } catch(e) {}
+}
+
+async function loadCarritoActivo() {
+  try {
+    const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc&limit=1');
+    if (!carritos || carritos.length === 0) return;
+    const carrito = carritos[0];
+    carritoActivoId = carrito.id;
+    currentTiendaId = carrito.tienda_id;
+    const items = await supaFetch(`jd_carrito_items?carrito_id=eq.${carritoActivoId}&select=*,jd_productos(nombre,emoji,tienda_id)`);
+    if (!items || items.length === 0) return;
+    items.forEach(item => {
+      const prod = item.jd_productos;
+      if (!prod) return;
+      cart[item.producto_id] = { emoji: prod.emoji || '🛒', nombre: prod.nombre, tiendaId: prod.tienda_id, itemId: item.id };
+      cartBought[item.producto_id] = item.comprado || false;
+    });
+    const sel = document.getElementById('store-select');
+    if (sel) sel.value = currentTiendaId;
+    document.getElementById('store-label').textContent = tiendas.find(t => t.id === currentTiendaId)?.nombre || '';
+    await loadCatalogo(currentTiendaId);
+    renderCart();
+    if (Object.keys(cart).length > 0) showToast('🛒 Carrito restaurado');
+  } catch(e) {}
 }
 
 function renderCart() {
@@ -596,24 +647,20 @@ async function finalizarCompra() {
   const keys = Object.keys(cart);
   if (keys.length === 0) return;
   try {
-    // Guardar sesión en Supabase
-    const carrito = await supaFetch('jd_carritos', {
-      method: 'POST',
-      headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ tienda_id: currentTiendaId, fecha_finalizada: new Date().toISOString(), status: 'finalizado' })
-    });
-    const carritoId = carrito[0].id;
-    const items = keys.map(id => ({ carrito_id: carritoId, producto_id: id, comprado: cartBought[id] || false, fecha_comprado: cartBought[id] ? new Date().toISOString() : null }));
-    await supaFetch('jd_carrito_items', { method: 'POST', body: JSON.stringify(items) });
-    // Limpiar
+    if (carritoActivoId) {
+      await supaFetch(`jd_carritos?id=eq.${carritoActivoId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'finalizado', fecha_finalizada: new Date().toISOString() })
+      });
+    }
     keys.forEach(id => {
       const el = document.getElementById('ci-' + id);
       if (el) el.classList.remove('gone');
     });
-    cart = {}; cartBought = {};
+    cart = {}; cartBought = {}; carritoActivoId = null;
     renderCart();
-    showToast('🎉 ¡Compra guardada!');
-  } catch(e) { showToast('Error al guardar compra', true); }
+    showToast('🎉 ¡Compra guardada en historial!');
+  } catch(e) { showToast('Error al finalizar compra', true); }
 }
 
 // MODAL NUEVO PRODUCTO
@@ -1006,6 +1053,7 @@ function escapar(str) {
 async function init() {
   await loadTiendas();
   await loadTareas();
+  await loadCarritoActivo();
 }
 
 init();

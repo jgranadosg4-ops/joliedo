@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>JolieDo!</title>
+<meta name="theme-color" content="#1a1a2e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="apple-touch-icon" href="/JolieDo.png"/>
+<link rel="manifest" href="/manifest.json"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #0f0f1a; --bg2: #1a1a2e; --bg3: #222238; --card: #1e1e32;
+  --border: rgba(255,255,255,0.08); --text: #f0f0f0; --text2: #9999bb;
+  --purple: #7F77DD; --teal: #1D9E75; --pink: #D4537E; --amber: #EF9F27; --red: #E24B4A;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; max-width: 600px; margin: 0 auto; }
+
+/* NAV */
+.nav { background: var(--bg2); padding: 16px 16px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.nav-left { display: flex; align-items: center; gap: 10px; }
+.nav-logo { width: 42px; height: 42px; border-radius: 12px; overflow: hidden; }
+.nav-logo img { width: 100%; height: 100%; object-fit: cover; }
+.nav-logo-fallback { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg,#7F77DD,#D4537E); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.nav-title { font-size: 20px; font-weight: 600; }
+.nav-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* TABS PRINCIPALES */
+.tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.tab { flex: 1; padding: 10px 8px; font-size: 12px; color: var(--text2); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; text-align: center; }
+.tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+/* SCREENS */
+.screen { display: none; padding: 12px 14px 100px; }
+.screen.show { display: block; }
+
+/* SECCIONES COLAPSABLES */
+.section { background: var(--bg2); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 10px; }
+.sec-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.sec-title { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.sec-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+.badge-purple { background: rgba(127,119,221,0.2); color: var(--purple); }
+.badge-green { background: rgba(29,158,117,0.2); color: var(--teal); }
+.badge-orange { background: rgba(239,159,39,0.2); color: var(--amber); }
+.badge-pink { background: rgba(212,83,126,0.2); color: var(--pink); }
+.badge-gray { background: rgba(255,255,255,0.08); color: var(--text2); }
+.badge-red { background: rgba(226,75,74,0.15); color: var(--red); }
+.chevron { color: var(--text2); font-size: 18px; transition: transform 0.2s; display: inline-block; }
+.chevron.open { transform: rotate(180deg); }
+.sec-body { border-top: 1px solid var(--border); }
+.sec-body.hidden { display: none; }
+
+/* DROPDOWN TIENDA */
+.store-select { width: 100%; background: var(--bg); color: var(--text); border: none; padding: 14px; font-size: 14px; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239999bb' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+.store-select option { background: var(--bg2); }
+
+/* GRID CATÁLOGO Y CARRITO */
+.cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
+.cat-item { background: var(--bg); border-radius: 12px; border: 1.5px solid var(--border); padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: opacity 0.2s, transform 0.2s; position: relative; }
+.cat-item:active { transform: scale(0.95); }
+.cat-item.gone { opacity: 0; pointer-events: none; transform: scale(0.8); }
+.cat-emoji { font-size: 24px; width: 42px; height: 42px; background: rgba(255,255,255,0.04); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.cat-name { font-size: 11px; text-align: center; line-height: 1.2; color: var(--text); }
+.cat-add { background: rgba(127,119,221,0.06); border: 1.5px dashed rgba(127,119,221,0.3); border-radius: 12px; padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+.cat-add-icon { font-size: 20px; color: var(--purple); width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
+.cat-add-lbl { font-size: 11px; color: var(--purple); }
+
+/* CARRITO ITEMS */
+.cart-item { background: var(--bg); border-radius: 12px; border: 1.5px solid var(--border); padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; position: relative; transition: all 0.2s; }
+.cart-item:active { transform: scale(0.95); }
+.cart-item.bought { border-color: var(--teal); background: rgba(29,158,117,0.08); }
+.cart-item.bought .cat-name { color: var(--text2); text-decoration: line-through; }
+.cart-item.bought .cat-emoji { opacity: 0.5; }
+.check-overlay { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: var(--bg); display: flex; align-items: center; justify-content: center; }
+.cart-item.bought .check-overlay { background: var(--teal); border-color: var(--teal); }
+.cart-empty { padding: 20px 14px; text-align: center; color: var(--text2); font-size: 13px; grid-column: 1/-1; }
+
+/* BOTÓN FINALIZAR */
+.fin-wrap { padding: 4px 12px 14px; }
+.fin-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--purple), var(--teal)); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.fin-btn:active { opacity: 0.85; }
+
+/* ALERTAS */
+.warn-row { background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.2); border-radius: 12px; padding: 10px 13px; display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+.warn-txt { font-size: 12px; color: var(--red); flex: 1; }
+.rec-alert { background: rgba(239,159,39,0.08); border: 1px solid rgba(239,159,39,0.25); border-radius: 12px; padding: 10px 13px; display: flex; align-items: center; gap: 9px; margin-bottom: 10px; cursor: pointer; }
+.rec-alert-txt { font-size: 12px; color: var(--amber); flex: 1; }
+.rec-alert-action { font-size: 11px; color: var(--purple); font-weight: 600; flex-shrink: 0; }
+
+/* FILTRO PILLS */
+.filter-row { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 12px; }
+.filter-row::-webkit-scrollbar { display: none; }
+.fpill { padding: 6px 14px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); color: var(--text2); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.fpill.on { border-color: var(--purple); color: var(--purple); background: rgba(127,119,221,0.12); }
+
+/* TAREAS */
+.task-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 7px; }
+.task-row { background: var(--bg); border-radius: 11px; border: 1px solid var(--border); padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; transition: opacity 0.3s, transform 0.3s; }
+.task-row.old { border-color: rgba(226,75,74,0.3); }
+.tcheck { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2); flex-shrink: 0; margin-top: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.task-text { font-size: 13px; flex: 1; line-height: 1.4; }
+.task-age { font-size: 11px; color: var(--red); margin-top: 3px; }
+.task-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.add-task-btn { margin: 0 12px 10px; padding: 9px; background: rgba(127,119,221,0.06); border: 1.5px dashed rgba(127,119,221,0.3); border-radius: 10px; color: var(--purple); font-size: 12px; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* RECURRENTES */
+.rec-row { background: var(--bg); border-radius: 11px; border: 1px solid var(--border); padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.rec-toggle { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(127,119,221,0.4); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.rec-toggle.on { background: var(--purple); border-color: var(--purple); }
+.rec-name { font-size: 13px; flex: 1; }
+.rec-cat { font-size: 10px; padding: 2px 8px; border-radius: 6px; flex-shrink: 0; }
+
+/* COMPLETADAS */
+.done-task { background: var(--bg); border-radius: 11px; border: 1px solid rgba(255,255,255,0.05); padding: 9px 12px; display: flex; align-items: center; gap: 10px; opacity: 0.55; }
+.done-check { width: 20px; height: 20px; border-radius: 50%; background: var(--teal); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+.done-name { font-size: 13px; flex: 1; text-decoration: line-through; }
+.done-date { font-size: 10px; color: var(--text2); flex-shrink: 0; }
+.limpiar-btn { margin: 8px 12px 10px; padding: 8px; background: rgba(226,75,74,0.06); border: 1px solid rgba(226,75,74,0.2); border-radius: 10px; color: var(--red); font-size: 12px; text-align: center; cursor: pointer; }
+
+/* HISTORIAL */
+.subtabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.stab { flex: 1; padding: 9px; border-radius: 11px; font-size: 12px; text-align: center; border: 1px solid var(--border); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+.stab.on { border-color: var(--purple); color: var(--purple); background: rgba(127,119,221,0.1); }
+.subscreen { display: none; }
+.subscreen.show { display: block; }
+.day-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 2px 8px; display: flex; align-items: center; justify-content: space-between; }
+.day-store-tag { font-size: 10px; background: rgba(255,255,255,0.07); color: #ccc; padding: 2px 8px; border-radius: 6px; text-transform: none; font-weight: 400; letter-spacing: 0; }
+.hist-card { background: var(--bg2); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 12px; }
+.hist-card-header { padding: 11px 13px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.hist-store { font-size: 13px; font-weight: 500; }
+.hist-date { font-size: 11px; color: var(--text2); }
+.hist-items-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px; }
+.hist-item { background: var(--bg); border-radius: 9px; padding: 7px 4px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.hist-emoji { font-size: 18px; }
+.hist-name { font-size: 10px; color: #ccc; text-align: center; line-height: 1.2; }
+.cat-group { background: var(--bg2); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 10px; }
+.cat-group-header { padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.cat-group-title { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.cat-body { border-top: 1px solid rgba(255,255,255,0.06); }
+.cat-body.hidden { display: none; }
+.act-row { padding: 9px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.act-row:last-child { border-bottom: none; }
+.act-check { width: 20px; height: 20px; border-radius: 50%; background: var(--teal); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10px; color: #fff; }
+.act-name { font-size: 13px; flex: 1; }
+.act-date { font-size: 11px; color: var(--text2); flex-shrink: 0; }
+
+/* MODAL NUEVA TAREA */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: flex-end; }
+.modal-overlay.hidden { display: none; }
+.modal { background: var(--bg2); border-radius: 20px 20px 0 0; width: 100%; max-height: 85vh; overflow-y: auto; padding: 20px 16px 40px; max-width: 600px; margin: 0 auto; }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-size: 18px; font-weight: 500; margin-bottom: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; display: block; font-weight: 500; }
+.form-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; -webkit-appearance: none; }
+.form-input:focus { border-color: var(--purple); }
+.submit-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--purple); color: #fff; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 8px; }
+.cancel-btn { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 14px; cursor: pointer; margin-top: 8px; }
+.cat-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.cat-btn { padding: 8px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-weight: 500; }
+.cat-btn.active { border-color: var(--purple); background: rgba(127,119,221,0.2); color: var(--purple); }
+
+/* MODAL NUEVO PRODUCTO */
+.emoji-picker { display: grid; grid-template-columns: repeat(6,1fr); gap: 6px; margin-top: 8px; }
+.ep-item { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+.ep-item.sel { border-color: var(--purple); background: rgba(127,119,221,0.2); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--teal); color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 999; white-space: nowrap; max-width: 90vw; text-align: center; }
+.toast.error { background: var(--red); }
+.toast.hidden { display: none; }
+
+.divider { height: 1px; background: var(--border); margin: 8px 0; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text2); font-size: 14px; }
+.loading { text-align: center; padding: 30px; color: var(--text2); font-size: 13px; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-left">
+    <div class="nav-logo" id="nav-logo-wrap">
+      <img src="/JolieDo.png" onerror="this.parentElement.outerHTML='<div class=nav-logo-fallback>✨</div>'" alt="JolieDo"/>
+    </div>
+    <div>
+      <div class="nav-title">JolieDo!</div>
+      <div class="nav-sub" id="nav-sub">Listas y pendientes</div>
+    </div>
+  </div>
+  <div style="font-size:22px;cursor:pointer;" id="notif-icon" title="Alertas">🔔</div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="setTab('compras',this)">🛒 Compras</div>
+  <div class="tab" onclick="setTab('pendientes',this)">✅ Pendientes</div>
+  <div class="tab" onclick="setTab('historial',this)">📋 Historial</div>
+</div>
+
+<!-- ==================== COMPRAS ==================== -->
+<div class="screen show" id="screen-compras">
+
+  <!-- TIENDA -->
+  <div class="section">
+    <div class="sec-header" onclick="toggleSec('tienda')">
+      <div class="sec-title">🏪 Tienda <span class="sec-badge badge-gray" id="store-label">Selecciona</span></div>
+      <span class="chevron open" id="chev-tienda">▾</span>
+    </div>
+    <div class="sec-body" id="body-tienda">
+      <select class="store-select" id="store-select" onchange="onStoreChange()">
+        <option value="">— Elige una tienda —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- CATÁLOGO -->
+  <div class="section">
+    <div class="sec-header" onclick="toggleSec('catalogo')">
+      <div class="sec-title">📦 Catálogo <span class="sec-badge badge-gray" id="cat-store-label"></span></div>
+      <span class="chevron open" id="chev-catalogo">▾</span>
+    </div>
+    <div class="sec-body" id="body-catalogo">
+      <div class="cat-grid" id="cat-grid">
+        <div class="empty-state">Selecciona una tienda primero</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARRITO -->
+  <div class="section">
+    <div class="sec-header" onclick="toggleSec('carrito')">
+      <div class="sec-title">🛒 Carrito por comprar <span class="sec-badge badge-purple" id="cart-count">0</span></div>
+      <span class="chevron open" id="chev-carrito">▾</span>
+    </div>
+    <div class="sec-body" id="body-carrito">
+      <div class="cat-grid" id="cart-grid">
+        <div class="cart-empty">Toca productos del catálogo para agregarlos</div>
+      </div>
+      <div class="fin-wrap hidden" id="fin-wrap">
+        <button class="fin-btn" onclick="finalizarCompra()">✅ Finalizar compra</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== PENDIENTES ==================== -->
+<div class="screen" id="screen-pendientes">
+
+  <div class="filter-row">
+    <div class="fpill on" onclick="setFilter('todos',this)">Todos</div>
+    <div class="fpill" onclick="setFilter('trabajo',this)">💼 Trabajo</div>
+    <div class="fpill" onclick="setFilter('hogar',this)">🏠 Hogar</div>
+    <div class="fpill" onclick="setFilter('ideas',this)">💡 Ideas</div>
+  </div>
+
+  <div class="warn-row hidden" id="warn-old">
+    <span style="font-size:16px;">⏰</span>
+    <div class="warn-txt" id="warn-old-txt">Tienes pendientes con más de 7 días sin hacer</div>
+  </div>
+
+  <!-- TRABAJO -->
+  <div class="section" id="sec-trabajo">
+    <div class="sec-header" onclick="toggleSec('trabajo')">
+      <div class="sec-title">💼 Trabajo <span class="sec-badge badge-orange" id="cnt-trabajo">0</span></div>
+      <span class="chevron open" id="chev-trabajo">▾</span>
+    </div>
+    <div class="sec-body" id="body-trabajo">
+      <div class="task-list" id="list-trabajo"></div>
+      <div class="add-task-btn" onclick="openNewTask('trabajo')">+ Agregar tarea de Trabajo</div>
+    </div>
+  </div>
+
+  <!-- HOGAR -->
+  <div class="section" id="sec-hogar">
+    <div class="sec-header" onclick="toggleSec('hogar')">
+      <div class="sec-title">🏠 Hogar <span class="sec-badge badge-green" id="cnt-hogar">0</span></div>
+      <span class="chevron open" id="chev-hogar">▾</span>
+    </div>
+    <div class="sec-body" id="body-hogar">
+      <div class="task-list" id="list-hogar"></div>
+      <div class="add-task-btn" onclick="openNewTask('hogar')">+ Agregar tarea de Hogar</div>
+    </div>
+  </div>
+
+  <!-- IDEAS -->
+  <div class="section" id="sec-ideas">
+    <div class="sec-header" onclick="toggleSec('ideas')">
+      <div class="sec-title">💡 Ideas <span class="sec-badge badge-pink" id="cnt-ideas">0</span></div>
+      <span class="chevron open" id="chev-ideas">▾</span>
+    </div>
+    <div class="sec-body" id="body-ideas">
+      <div class="task-list" id="list-ideas"></div>
+      <div class="add-task-btn" onclick="openNewTask('ideas')">+ Agregar idea</div>
+    </div>
+  </div>
+
+  <!-- RECURRENTES -->
+  <div class="section">
+    <div class="sec-header" onclick="toggleSec('recurrentes')">
+      <div class="sec-title">🔁 Recurrentes <span class="sec-badge badge-purple">Activa los de esta semana</span></div>
+      <span class="chevron" id="chev-recurrentes">▾</span>
+    </div>
+    <div class="sec-body hidden" id="body-recurrentes">
+      <div class="task-list" id="list-recurrentes"><div class="loading">Cargando...</div></div>
+      <div class="add-task-btn" onclick="openNewRecurrente()">+ Agregar recurrente</div>
+    </div>
+  </div>
+
+  <!-- COMPLETADAS -->
+  <div class="section hidden" id="sec-completadas">
+    <div class="sec-header" onclick="toggleSec('completadas')">
+      <div class="sec-title">✅ Completadas <span class="sec-badge badge-gray" id="cnt-completadas">0</span></div>
+      <span class="chevron open" id="chev-completadas">▾</span>
+    </div>
+    <div class="sec-body" id="body-completadas">
+      <div class="task-list" id="list-completadas"></div>
+      <div class="limpiar-btn" onclick="limpiarCompletadas()">🗑 Limpiar completadas</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== HISTORIAL ==================== -->
+<div class="screen" id="screen-historial">
+
+  <div class="subtabs">
+    <div class="stab on" onclick="showSub('compras-hist')">🛒 Compras</div>
+    <div class="stab" onclick="showSub('actividades-hist')">✅ Actividades</div>
+  </div>
+
+  <!-- HISTORIAL COMPRAS -->
+  <div class="subscreen show" id="sub-compras-hist">
+    <div id="rec-alerts-container"></div>
+    <div id="hist-compras-container"><div class="loading">Cargando historial...</div></div>
+  </div>
+
+  <!-- HISTORIAL ACTIVIDADES -->
+  <div class="subscreen" id="sub-actividades-hist">
+    <div id="hist-actividades-container"><div class="loading">Cargando actividades...</div></div>
+  </div>
+
+</div>
+
+<!-- MODAL NUEVA TAREA -->
+<div class="modal-overlay hidden" id="task-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="task-modal-title">Nueva tarea</div>
+    <div class="form-group">
+      <label class="form-label">Categoría</label>
+      <div class="cat-btns">
+        <div class="cat-btn active" onclick="setTaskCat('trabajo',this)">💼 Trabajo</div>
+        <div class="cat-btn" onclick="setTaskCat('hogar',this)">🏠 Hogar</div>
+        <div class="cat-btn" onclick="setTaskCat('ideas',this)">💡 Ideas</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nombre de la tarea *</label>
+      <input class="form-input" id="task-nombre" placeholder="¿Qué tienes que hacer?"/>
+    </div>
+    <button class="submit-btn" onclick="submitTask()">Guardar tarea</button>
+    <button class="cancel-btn" onclick="closeTaskModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PRODUCTO -->
+<div class="modal-overlay hidden" id="product-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo producto</div>
+    <div class="form-group">
+      <label class="form-label">Nombre del producto *</label>
+      <input class="form-input" id="prod-nombre" placeholder="Ej. Aguacate"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Emoji</label>
+      <div class="emoji-picker" id="emoji-picker">
+        <div class="ep-item sel" onclick="selectEmoji(this,'🛒')">🛒</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥩')">🥩</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍗')">🍗</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🐟')">🐟</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥛')">🥛</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧀')">🧀</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥚')">🥚</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍞')">🍞</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥬')">🥬</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍅')">🍅</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍌')">🍌</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍎')">🍎</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫒')">🫒</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧴')">🧴</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧻')">🧻</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💊')">💊</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫙')">🫙</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥫')">🥫</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Categoría</label>
+      <input class="form-input" id="prod-categoria" placeholder="Ej. Carnes, Despensa..."/>
+    </div>
+    <button class="submit-btn" onclick="submitProduct()">Agregar al catálogo</button>
+    <button class="cancel-btn" onclick="closeProdModal()">Cancelar</button>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://fcdolhvwlhhsfvebpzug.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ae61QVnxB7wqf9hsbh02eQ_YJ_ufc67';
+
+// ---- STATE ----
+let tiendas = [];
+let productos = {};      // { tienda_id: [...] }
+let cart = {};           // { producto_id: { emoji, nombre } }
+let cartBought = {};     // { producto_id: true }
+let currentTiendaId = null;
+let tareas = [];         // pendientes activos
+let recurrentes = [];    // tareas recurrentes
+let completadas = [];    // completadas en esta sesión
+let currentTaskCat = 'trabajo';
+let selectedEmoji = '🛒';
+let currentFilter = 'todos';
+let historialCompras = [];
+let historialActividades = [];
+let currentSubHist = 'compras-hist';
+
+// ---- SUPABASE ----
+async function supaFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ---- TABS ----
+function setTab(tab, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('show');
+  if (el) el.classList.add('active');
+  if (tab === 'historial') loadHistorial();
+}
+
+// ---- SECCIONES COLAPSABLES ----
+function toggleSec(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  const hidden = body.classList.toggle('hidden');
+  if (chev) chev.classList.toggle('open', !hidden);
+}
+
+// ---- COMPRAS ----
+async function loadTiendas() {
+  try {
+    tiendas = await supaFetch('jd_tiendas?order=orden');
+    const sel = document.getElementById('store-select');
+    sel.innerHTML = '<option value="">— Elige una tienda —</option>';
+    tiendas.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.nombre;
+      sel.appendChild(opt);
+    });
+  } catch(e) { showToast('Error cargando tiendas', true); }
+}
+
+async function onStoreChange() {
+  const sel = document.getElementById('store-select');
+  currentTiendaId = sel.value;
+  if (!currentTiendaId) return;
+  const tienda = tiendas.find(t => t.id === currentTiendaId);
+  document.getElementById('store-label').textContent = tienda ? tienda.nombre : '';
+  document.getElementById('cat-store-label').textContent = tienda ? tienda.nombre : '';
+  toggleSec('tienda');
+  await loadCatalogo(currentTiendaId);
+}
+
+async function loadCatalogo(tiendaId) {
+  const grid = document.getElementById('cat-grid');
+  grid.innerHTML = '<div class="loading">Cargando catálogo...</div>';
+  try {
+    if (!productos[tiendaId]) {
+      productos[tiendaId] = await supaFetch(`jd_productos?tienda_id=eq.${tiendaId}&activo=eq.true&order=categoria,nombre`);
+    }
+    renderCatalogo();
+  } catch(e) { grid.innerHTML = '<div class="empty-state">Error cargando catálogo</div>'; }
+}
+
+function renderCatalogo() {
+  const grid = document.getElementById('cat-grid');
+  const prods = productos[currentTiendaId] || [];
+  grid.innerHTML = '';
+  prods.forEach(p => {
+    const inCart = cart[p.id] !== undefined;
+    const div = document.createElement('div');
+    div.className = 'cat-item' + (inCart ? ' gone' : '');
+    div.id = 'ci-' + p.id;
+    div.onclick = () => addToCart(p.id, p.emoji, p.nombre);
+    div.innerHTML = `<div class="cat-emoji">${p.emoji || '🛒'}</div><div class="cat-name">${p.nombre}</div>`;
+    grid.appendChild(div);
+  });
+  // Botón nuevo
+  const addDiv = document.createElement('div');
+  addDiv.className = 'cat-add';
+  addDiv.onclick = openProdModal;
+  addDiv.innerHTML = `<div class="cat-add-icon">+</div><div class="cat-add-lbl">Nuevo</div>`;
+  grid.appendChild(addDiv);
+}
+
+function addToCart(id, emoji, nombre) {
+  if (cart[id] !== undefined) return;
+  cart[id] = { emoji: emoji || '🛒', nombre };
+  cartBought[id] = false;
+  const el = document.getElementById('ci-' + id);
+  if (el) el.classList.add('gone');
+  renderCart();
+}
+
+function toggleBought(id) {
+  if (cart[id] === undefined) return;
+  cartBought[id] = !cartBought[id];
+  renderCart();
+}
+
+function renderCart() {
+  const grid = document.getElementById('cart-grid');
+  const keys = Object.keys(cart);
+  document.getElementById('cart-count').textContent = keys.length;
+  if (keys.length === 0) {
+    grid.innerHTML = '<div class="cart-empty">Toca productos del catálogo para agregarlos</div>';
+    document.getElementById('fin-wrap').classList.add('hidden');
+    return;
+  }
+  grid.innerHTML = keys.map(id => {
+    const item = cart[id];
+    const bought = cartBought[id];
+    return `<div class="cart-item${bought ? ' bought' : ''}" onclick="toggleBought('${id}')">
+      <div class="check-overlay">${bought ? '✓' : ''}</div>
+      <div class="cat-emoji">${item.emoji}</div>
+      <div class="cat-name">${item.nombre}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('fin-wrap').classList.remove('hidden');
+}
+
+async function finalizarCompra() {
+  const keys = Object.keys(cart);
+  if (keys.length === 0) return;
+  try {
+    // Guardar sesión en Supabase
+    const carrito = await supaFetch('jd_carritos', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ tienda_id: currentTiendaId, fecha_finalizada: new Date().toISOString(), status: 'finalizado' })
+    });
+    const carritoId = carrito[0].id;
+    const items = keys.map(id => ({ carrito_id: carritoId, producto_id: id, comprado: cartBought[id] || false, fecha_comprado: cartBought[id] ? new Date().toISOString() : null }));
+    await supaFetch('jd_carrito_items', { method: 'POST', body: JSON.stringify(items) });
+    // Limpiar
+    keys.forEach(id => {
+      const el = document.getElementById('ci-' + id);
+      if (el) el.classList.remove('gone');
+    });
+    cart = {}; cartBought = {};
+    renderCart();
+    showToast('🎉 ¡Compra guardada!');
+  } catch(e) { showToast('Error al guardar compra', true); }
+}
+
+// MODAL NUEVO PRODUCTO
+function openProdModal() {
+  document.getElementById('prod-nombre').value = '';
+  document.getElementById('prod-categoria').value = '';
+  selectedEmoji = '🛒';
+  document.querySelectorAll('.ep-item').forEach(e => e.classList.remove('sel'));
+  document.querySelector('.ep-item').classList.add('sel');
+  document.getElementById('product-modal').classList.remove('hidden');
+}
+function closeProdModal() { document.getElementById('product-modal').classList.add('hidden'); }
+function selectEmoji(el, emoji) {
+  document.querySelectorAll('.ep-item').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedEmoji = emoji;
+}
+async function submitProduct() {
+  const nombre = document.getElementById('prod-nombre').value.trim();
+  const categoria = document.getElementById('prod-categoria').value.trim() || 'Varios';
+  if (!nombre) { showToast('Escribe el nombre del producto', true); return; }
+  if (!currentTiendaId) { showToast('Selecciona una tienda primero', true); return; }
+  try {
+    const nuevos = await supaFetch('jd_productos', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ tienda_id: currentTiendaId, nombre, emoji: selectedEmoji, categoria })
+    });
+    if (productos[currentTiendaId]) productos[currentTiendaId].push(nuevos[0]);
+    renderCatalogo();
+    closeProdModal();
+    showToast('Producto agregado al catálogo ✨');
+  } catch(e) { showToast('Error al guardar', true); }
+}
+
+// ---- PENDIENTES ----
+async function loadTareas() {
+  try {
+    const data = await supaFetch('jd_tareas?status=eq.pendiente&order=fecha_creada');
+    tareas = data.filter(t => !t.es_recurrente);
+    recurrentes = data.filter(t => t.es_recurrente);
+    renderTareas();
+    renderRecurrentes();
+    checkOldTareas();
+  } catch(e) { showToast('Error cargando tareas', true); }
+}
+
+function renderTareas() {
+  const cats = ['trabajo', 'hogar', 'ideas'];
+  cats.forEach(cat => {
+    const list = document.getElementById('list-' + cat);
+    const filtradas = tareas.filter(t => t.categoria === cat);
+    document.getElementById('cnt-' + cat).textContent = filtradas.length;
+    list.innerHTML = '';
+    filtradas.forEach(t => {
+      const diasPasados = t.fecha_creada ? Math.floor((Date.now() - new Date(t.fecha_creada)) / 86400000) : 0;
+      const isOld = diasPasados >= 7;
+      const div = document.createElement('div');
+      div.className = 'task-row' + (isOld ? ' old' : '');
+      div.id = 'task-' + t.id;
+      div.innerHTML = `
+        <div class="tcheck" onclick="completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)"></div>
+        <div style="flex:1">
+          <div class="task-text">${t.nombre}</div>
+          ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">Agregado hace ${diasPasados} día${diasPasados===1?'':'s'}</div>`}
+        </div>`;
+      list.appendChild(div);
+    });
+    // Aplicar filtro
+    applyFilter();
+  });
+}
+
+function renderRecurrentes() {
+  const list = document.getElementById('list-recurrentes');
+  list.innerHTML = '';
+  const cats = ['trabajo', 'hogar', 'ideas'];
+  const labels = { trabajo: 'badge-orange', hogar: 'badge-green', ideas: 'badge-pink' };
+  const nombres = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '💡 Ideas' };
+  cats.forEach(cat => {
+    const grupo = recurrentes.filter(t => t.categoria === cat);
+    if (grupo.length === 0) return;
+    grupo.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'rec-row';
+      div.innerHTML = `
+        <div class="rec-toggle${t.recurrente_activa ? ' on' : ''}" id="rec-toggle-${t.id}" onclick="toggleRecurrente('${t.id}',this)">
+          ${t.recurrente_activa ? '✓' : ''}
+        </div>
+        <div class="rec-name">${t.nombre}</div>
+        <span class="rec-cat ${labels[cat]}">${nombres[cat]}</span>`;
+      list.appendChild(div);
+    });
+  });
+}
+
+function checkOldTareas() {
+  const oldCount = tareas.filter(t => {
+    const dias = t.fecha_creada ? Math.floor((Date.now() - new Date(t.fecha_creada)) / 86400000) : 0;
+    return dias >= 7;
+  }).length;
+  const warn = document.getElementById('warn-old');
+  if (oldCount > 0) {
+    warn.classList.remove('hidden');
+    document.getElementById('warn-old-txt').textContent = `${oldCount} pendiente${oldCount>1?'s':''} con más de 7 días sin hacer`;
+  } else {
+    warn.classList.add('hidden');
+  }
+}
+
+function setFilter(cat, el) {
+  currentFilter = cat;
+  document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
+  if (el) el.classList.add('on');
+  applyFilter();
+}
+
+function applyFilter() {
+  const cats = ['trabajo', 'hogar', 'ideas'];
+  cats.forEach(cat => {
+    const sec = document.getElementById('sec-' + cat);
+    if (!sec) return;
+    if (currentFilter === 'todos' || currentFilter === cat) {
+      sec.style.display = '';
+    } else {
+      sec.style.display = 'none';
+    }
+  });
+}
+
+async function completeTask(id, nombre, cat, checkEl) {
+  checkEl.style.background = 'var(--purple)';
+  checkEl.style.borderColor = 'var(--purple)';
+  checkEl.textContent = '✓';
+  checkEl.style.color = '#fff';
+  setTimeout(async () => {
+    const row = document.getElementById('task-' + id);
+    if (row) { row.style.opacity = '0'; row.style.transform = 'translateX(30px)'; }
+    setTimeout(async () => {
+      if (row) row.remove();
+      tareas = tareas.filter(t => t.id !== id);
+      updateCounts();
+      checkOldTareas();
+      addToCompleted(nombre, cat);
+      try {
+        await supaFetch(`jd_tareas?id=eq.${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'completado', fecha_completada: new Date().toISOString() })
+        });
+      } catch(e) {}
+    }, 300);
+  }, 400);
+}
+
+function addToCompleted(nombre, cat) {
+  const labels = { trabajo: '💼', hogar: '🏠', ideas: '💡' };
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  completadas.push({ nombre, cat, timeStr });
+  const list = document.getElementById('list-completadas');
+  const div = document.createElement('div');
+  div.className = 'done-task';
+  div.innerHTML = `<div class="done-check">✓</div><div class="done-name">${labels[cat]||''} ${nombre}</div><div class="done-date">${timeStr}</div>`;
+  list.prepend(div);
+  document.getElementById('sec-completadas').classList.remove('hidden');
+  document.getElementById('cnt-completadas').textContent = completadas.length;
+}
+
+function limpiarCompletadas() {
+  completadas = [];
+  document.getElementById('list-completadas').innerHTML = '';
+  document.getElementById('cnt-completadas').textContent = '0';
+  document.getElementById('sec-completadas').classList.add('hidden');
+}
+
+function updateCounts() {
+  ['trabajo','hogar','ideas'].forEach(cat => {
+    const cnt = tareas.filter(t => t.categoria === cat).length;
+    document.getElementById('cnt-' + cat).textContent = cnt;
+  });
+}
+
+async function toggleRecurrente(id, el) {
+  const isOn = el.classList.toggle('on');
+  el.textContent = isOn ? '✓' : '';
+  try {
+    await supaFetch(`jd_tareas?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ recurrente_activa: isOn })
+    });
+    const t = recurrentes.find(r => r.id === id);
+    if (t) t.recurrente_activa = isOn;
+  } catch(e) {}
+}
+
+// MODAL NUEVA TAREA
+function openNewTask(cat) {
+  currentTaskCat = cat;
+  document.getElementById('task-nombre').value = '';
+  document.getElementById('task-modal-title').textContent = cat === 'ideas' ? 'Nueva idea' : 'Nueva tarea';
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  const idx = ['trabajo','hogar','ideas'].indexOf(cat);
+  document.querySelectorAll('.cat-btn')[idx]?.classList.add('active');
+  document.getElementById('task-modal').classList.remove('hidden');
+}
+function openNewRecurrente() { openNewTask('hogar'); }
+function closeTaskModal() { document.getElementById('task-modal').classList.add('hidden'); }
+function setTaskCat(cat, el) {
+  currentTaskCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+async function submitTask() {
+  const nombre = document.getElementById('task-nombre').value.trim();
+  if (!nombre) { showToast('Escribe el nombre de la tarea', true); return; }
+  try {
+    const nueva = await supaFetch('jd_tareas', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ nombre, categoria: currentTaskCat, es_recurrente: false, status: 'pendiente' })
+    });
+    tareas.push(nueva[0]);
+    renderTareas();
+    closeTaskModal();
+    showToast('Tarea agregada ✨');
+  } catch(e) { showToast('Error al guardar', true); }
+}
+
+// ---- HISTORIAL ----
+function showSub(sub) {
+  currentSubHist = sub;
+  document.querySelectorAll('.subscreen').forEach((s,i) => s.classList.remove('show'));
+  document.querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
+  document.getElementById('sub-' + sub).classList.add('show');
+  document.querySelectorAll('.stab')[sub === 'compras-hist' ? 0 : 1].classList.add('on');
+}
+
+async function loadHistorial() {
+  loadHistorialCompras();
+  loadHistorialActividades();
+}
+
+async function loadHistorialCompras() {
+  const container = document.getElementById('hist-compras-container');
+  const alertsContainer = document.getElementById('rec-alerts-container');
+  try {
+    const carritos = await supaFetch('jd_carritos?status=eq.finalizado&order=fecha_finalizada.desc&limit=20');
+    if (!carritos || carritos.length === 0) {
+      container.innerHTML = '<div class="empty-state">Aún no hay compras registradas</div>';
+      return;
+    }
+    // Cargar items de cada carrito
+    const carritoIds = carritos.map(c => c.id);
+    const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji)`);
+    // Alertas de productos que llevan +14 días sin comprarse
+    const productosComprados = {};
+    items.forEach(item => {
+      if (!productosComprados[item.producto_id] || new Date(item.updated_at) > new Date(productosComprados[item.producto_id].fecha)) {
+        productosComprados[item.producto_id] = { fecha: item.updated_at, nombre: item.jd_productos?.nombre, emoji: item.jd_productos?.emoji };
+      }
+    });
+    const hoy = new Date();
+    const alertas = Object.entries(productosComprados).filter(([id, p]) => {
+      const dias = Math.floor((hoy - new Date(p.fecha)) / 86400000);
+      return dias >= 14;
+    });
+    alertsContainer.innerHTML = alertas.map(([id, p]) => {
+      const dias = Math.floor((hoy - new Date(p.fecha)) / 86400000);
+      return `<div class="rec-alert" onclick="addProductoAlCarrito('${id}','${escapar(p.nombre||'')}','${p.emoji||'🛒'}')">
+        <span style="font-size:16px;">🔁</span>
+        <div class="rec-alert-txt"><strong>${p.nombre}</strong> lleva ${dias} días sin comprarse</div>
+        <div class="rec-alert-action">+ Al carrito</div>
+      </div>`;
+    }).join('');
+    // Agrupar por día
+    const grupos = {};
+    carritos.forEach(c => {
+      const fecha = new Date(c.fecha_finalizada);
+      const hoy2 = new Date();
+      const ayer = new Date(hoy2); ayer.setDate(ayer.getDate()-1);
+      const inicioSemana = new Date(hoy2); inicioSemana.setDate(inicioSemana.getDate()-7);
+      let grupo;
+      if (fecha.toDateString() === hoy2.toDateString()) grupo = 'Hoy';
+      else if (fecha.toDateString() === ayer.toDateString()) grupo = 'Ayer';
+      else if (fecha >= inicioSemana) grupo = 'Esta semana';
+      else grupo = 'Antes';
+      if (!grupos[grupo]) grupos[grupo] = [];
+      grupos[grupo].push({ carrito: c, items: items.filter(i => i.carrito_id === c.id) });
+    });
+    const orden = ['Hoy','Ayer','Esta semana','Antes'];
+    container.innerHTML = orden.filter(g => grupos[g]).map(g => {
+      const tiendaNombre = tiendas.find(t => t.id === grupos[g][0]?.carrito?.tienda_id)?.nombre || '';
+      return `<div class="day-label">${g} <span class="day-store-tag">${tiendaNombre}</span></div>` +
+        grupos[g].map(({ carrito, items: citems }) => {
+          const tienda = tiendas.find(t => t.id === carrito.tienda_id);
+          const fechaStr = new Date(carrito.fecha_finalizada).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' });
+          return `<div class="hist-card">
+            <div class="hist-card-header">
+              <div class="hist-store">🏪 ${tienda?.nombre || 'Tienda'}</div>
+              <div class="hist-date">${fechaStr} · ${citems.length} items</div>
+            </div>
+            <div class="hist-items-grid">
+              ${citems.map(i => `<div class="hist-item"><div class="hist-emoji">${i.jd_productos?.emoji||'🛒'}</div><div class="hist-name">${i.jd_productos?.nombre||''}</div></div>`).join('')}
+            </div>
+          </div>`;
+        }).join('');
+    }).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state">Error cargando historial</div>'; }
+}
+
+async function loadHistorialActividades() {
+  const container = document.getElementById('hist-actividades-container');
+  try {
+    const data = await supaFetch('jd_tareas?status=eq.completado&order=fecha_completada.desc&limit=50');
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="empty-state">Aún no hay actividades completadas</div>';
+      return;
+    }
+    const cats = [
+      { key: 'trabajo', label: '💼 Trabajo', badge: 'badge-orange' },
+      { key: 'hogar', label: '🏠 Hogar', badge: 'badge-green' },
+      { key: 'ideas', label: '💡 Ideas', badge: 'badge-pink' }
+    ];
+    container.innerHTML = cats.map(({ key, label, badge }) => {
+      const grupo = data.filter(t => t.categoria === key);
+      if (grupo.length === 0) return '';
+      return `<div class="cat-group">
+        <div class="cat-group-header" onclick="toggleCatHist('${key}')">
+          <div class="cat-group-title">${label} <span class="sec-badge ${badge}">${grupo.length} completada${grupo.length>1?'s':''}</span></div>
+          <span class="chevron open" id="chev-hist-${key}">▾</span>
+        </div>
+        <div class="cat-body" id="body-hist-${key}">
+          ${grupo.map(t => {
+            const fecha = t.fecha_completada ? new Date(t.fecha_completada).toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '';
+            return `<div class="act-row"><div class="act-check">✓</div><div class="act-name">${t.nombre}</div><div class="act-date">${fecha}</div></div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state">Error cargando actividades</div>'; }
+}
+
+function toggleCatHist(id) {
+  const body = document.getElementById('body-hist-' + id);
+  const chev = document.getElementById('chev-hist-' + id);
+  if (!body) return;
+  const hidden = body.classList.toggle('hidden');
+  if (chev) chev.classList.toggle('open', !hidden);
+}
+
+function addProductoAlCarrito(id, nombre, emoji) {
+  if (!currentTiendaId) {
+    showToast('Primero selecciona una tienda en Compras', true);
+    return;
+  }
+  if (cart[id] !== undefined) { showToast('Ya está en el carrito'); return; }
+  cart[id] = { emoji, nombre };
+  cartBought[id] = false;
+  renderCart();
+  setTab('compras', document.querySelector('.tab'));
+  showToast(`${emoji} ${nombre} agregado al carrito`);
+}
+
+// ---- UTILS ----
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+function escapar(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ---- INIT ----
+async function init() {
+  await loadTiendas();
+  await loadTareas();
+}
+
+init();
+</script>
+</body>
+</html>

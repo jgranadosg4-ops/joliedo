@@ -473,8 +473,24 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
       <div class="cat-select-grid" id="cat-select-grid"></div>
       <input class="form-input hidden" id="prod-categoria-nueva" placeholder="Nueva categoría..." style="margin-top:8px;"/>
     </div>
+    <div class="form-group">
+      <label class="form-label">¿En qué tiendas lo compras? *</label>
+      <div class="cat-select-grid" id="tienda-check-grid"></div>
+    </div>
     <button class="submit-btn" onclick="submitProduct()">Agregar al catálogo</button>
     <button class="cancel-btn" onclick="closeProdModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL SELECTOR TIENDA (desde "Todas") -->
+<div class="modal-overlay hidden" id="tienda-selector-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">¿En qué tienda lo compras hoy?</div>
+    <div class="form-group">
+      <div class="cat-select-grid" id="tienda-selector-grid"></div>
+    </div>
+    <button class="cancel-btn" onclick="document.getElementById('tienda-selector-modal').classList.add('hidden')">Cancelar</button>
   </div>
 </div>
 
@@ -560,6 +576,9 @@ async function selectStoreChip(id, nombre) {
   currentTiendaId = id;
   renderStoreChips();
   document.getElementById('store-label').textContent = nombre;
+  // Colapsar sección tienda para ganar espacio
+  document.getElementById('body-tienda')?.classList.add('hidden');
+  document.getElementById('chev-tienda')?.classList.remove('open');
   if (id === 'todas') {
     document.getElementById('cat-store-label').textContent = '';
     await loadCatalogoTodas();
@@ -577,13 +596,17 @@ async function loadCatalogoTodas() {
   const grid = document.getElementById('cat-grid');
   grid.innerHTML = '<div class="loading">Cargando catálogo...</div>';
   try {
-    // Cargar todos los productos de todas las tiendas
+    // Cargar todos los productos sin duplicados
     const todos = await supaFetch('jd_productos?activo=eq.true&order=nombre');
-    // Guardar en cache por tienda también
-    tiendas.forEach(t => {
-      if (!productos[t.id]) productos[t.id] = todos.filter(p => p.tienda_id === t.id);
-    });
     productos['todas'] = todos;
+    // Cargar también relaciones para saber qué tiendas tiene cada producto
+    const rels = await supaFetch('jd_producto_tiendas?select=producto_id,tienda_id');
+    // Mapa producto_id -> [tienda_ids]
+    window._productoTiendas = {};
+    rels.forEach(r => {
+      if (!window._productoTiendas[r.producto_id]) window._productoTiendas[r.producto_id] = [];
+      window._productoTiendas[r.producto_id].push(r.tienda_id);
+    });
     renderCatalogo();
     document.getElementById('body-catalogo')?.classList.remove('hidden');
     document.getElementById('chev-catalogo')?.classList.add('open');
@@ -597,7 +620,12 @@ async function loadCatalogo(tiendaId) {
   grid.innerHTML = '<div class="loading">Cargando catálogo...</div>';
   try {
     if (!productos[tiendaId]) {
-      productos[tiendaId] = await supaFetch(`jd_productos?tienda_id=eq.${tiendaId}&activo=eq.true&order=categoria,nombre`);
+      // Obtener productos via relación producto_tiendas
+      const rels = await supaFetch(`jd_producto_tiendas?tienda_id=eq.${tiendaId}&select=producto_id,jd_productos(id,nombre,emoji,categoria,activo)`);
+      productos[tiendaId] = rels
+        .map(r => r.jd_productos)
+        .filter(p => p && p.activo)
+        .sort((a,b) => a.nombre.localeCompare(b.nombre));
     }
     renderCatalogo();
   } catch(e) { grid.innerHTML = '<div class="empty-state">Error cargando catálogo</div>'; }
@@ -626,8 +654,20 @@ function renderCatalogo() {
 
 async function addToCart(id, emoji, nombre) {
   if (cart[id] !== undefined) return;
-  const tiendaDelProducto = currentTiendaId !== 'todas' ? currentTiendaId : null;
-  if (!tiendaDelProducto) { showToast('Selecciona una tienda específica primero', true); return; }
+  let tiendaDelProducto = currentTiendaId !== 'todas' ? currentTiendaId : null;
+  if (!tiendaDelProducto) {
+    // Desde "Todas" - pedir al usuario en qué tienda lo compra
+    const tiendasDelProducto = (window._productoTiendas || {})[id] || [];
+    const opcionesTodas = tiendas.filter(t => tiendasDelProducto.includes(t.id));
+    if (opcionesTodas.length === 1) {
+      tiendaDelProducto = opcionesTodas[0].id;
+    } else if (opcionesTodas.length > 1) {
+      openTiendaSelector(id, emoji, nombre, opcionesTodas);
+      return;
+    } else {
+      showToast('Selecciona una tienda específica primero', true); return;
+    }
+  }
 
   // Buscar carrito activo para ESTA tienda específica
   if (!window._carritosPorTienda) window._carritosPorTienda = {};
@@ -805,18 +845,27 @@ async function submitProduct() {
   const nombre = document.getElementById('prod-nombre').value.trim();
   const catNueva = document.getElementById('prod-categoria-nueva').value.trim();
   const categoria = catNueva || selectedCategoria || 'Varios';
-  const tiendaId = currentTiendaId === 'todas' ? null : currentTiendaId;
   if (!nombre) { showToast('Escribe el nombre del producto', true); return; }
-  if (!tiendaId) { showToast('Selecciona una tienda específica primero', true); return; }
+  // Tiendas seleccionadas en el modal
+  const tiendasSel = [...document.querySelectorAll('.tienda-check-btn.on')].map(b => b.dataset.tiendaId);
+  if (tiendasSel.length === 0) { showToast('Selecciona al menos una tienda', true); return; }
   try {
+    // Crear producto
     const nuevos = await supaFetch('jd_productos', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ tienda_id: tiendaId, nombre, emoji: selectedEmoji, categoria })
+      body: JSON.stringify({ nombre, emoji: selectedEmoji, categoria })
     });
-    if (!productos[tiendaId]) productos[tiendaId] = [];
-    productos[tiendaId].push(nuevos[0]);
-    delete productos['todas']; // invalidar cache de todas
+    const prod = nuevos[0];
+    // Crear relaciones con tiendas
+    const rels = tiendasSel.map(tid => ({ producto_id: prod.id, tienda_id: tid }));
+    await supaFetch('jd_producto_tiendas', {
+      method: 'POST',
+      body: JSON.stringify(rels)
+    });
+    // Invalidar cache
+    tiendasSel.forEach(tid => delete productos[tid]);
+    delete productos['todas'];
     renderCatalogo();
     closeProdModal();
     showToast('Producto agregado al catálogo ✨');
@@ -1172,6 +1221,26 @@ function addProductoAlCarrito(id, nombre, emoji) {
   renderCart();
   setTab('compras', document.querySelector('.tab'));
   showToast(`${emoji} ${nombre} agregado al carrito`);
+}
+
+// ---- SELECTOR TIENDA DESDE TODAS ----
+function openTiendaSelector(prodId, emoji, nombre, opciones) {
+  const grid = document.getElementById('tienda-selector-grid');
+  grid.innerHTML = opciones.map(t =>
+    `<div class="cat-sel-btn" style="width:100%;margin-bottom:6px;" onclick="confirmTiendaYAgregar('${prodId}','${emoji}','${escapar(nombre)}','${t.id}')">
+      ${t.nombre}
+    </div>`
+  ).join('');
+  document.getElementById('tienda-selector-modal').classList.remove('hidden');
+}
+
+async function confirmTiendaYAgregar(prodId, emoji, nombre, tiendaId) {
+  document.getElementById('tienda-selector-modal').classList.add('hidden');
+  // Temporalmente cambiar tienda para el insert
+  const tiendaAnterior = currentTiendaId;
+  currentTiendaId = tiendaId;
+  await addToCart(prodId, emoji, nombre);
+  currentTiendaId = tiendaAnterior;
 }
 
 // ---- UTILS ----

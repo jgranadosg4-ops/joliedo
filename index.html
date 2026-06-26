@@ -79,6 +79,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .cart-item.bought .check-overlay { background: var(--teal); border-color: var(--teal); }
 .cart-empty { padding: 20px 14px; text-align: center; color: var(--text2); font-size: 13px; grid-column: 1/-1; }
 .cart-tienda-lbl { font-size: 10px; color: var(--text2); text-align: center; margin-top: 1px; }
+.cart-remove-btn { position: absolute; top: 4px; left: 4px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(226,75,74,0.7); color: #fff; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
 
 /* BOTÓN FINALIZAR */
 .fin-wrap { padding: 4px 12px 14px; }
@@ -544,15 +545,14 @@ function renderCatalogo() {
 
 async function addToCart(id, emoji, nombre) {
   if (cart[id] !== undefined) return;
-  // Usar la tienda del producto, no currentTiendaId (que puede ser "todas")
   const tiendaDelProducto = currentTiendaId !== 'todas' ? currentTiendaId : null;
   if (!tiendaDelProducto) { showToast('Selecciona una tienda específica primero', true); return; }
 
-  // Buscar si ya hay un carrito activo para esta tienda
-  let carritoId = carritoActivoId;
+  // Buscar carrito activo para ESTA tienda específica
+  if (!window._carritosPorTienda) window._carritosPorTienda = {};
+  let carritoId = window._carritosPorTienda[tiendaDelProducto];
   if (!carritoId) {
     try {
-      // Buscar carrito activo existente para esta tienda
       const existing = await supaFetch(`jd_carritos?status=eq.activo&tienda_id=eq.${tiendaDelProducto}&limit=1`);
       if (existing && existing.length > 0) {
         carritoId = existing[0].id;
@@ -564,6 +564,7 @@ async function addToCart(id, emoji, nombre) {
         });
         carritoId = c[0].id;
       }
+      window._carritosPorTienda[tiendaDelProducto] = carritoId;
       carritoActivoId = carritoId;
     } catch(e) { showToast('Error al crear carrito', true); return; }
   }
@@ -573,7 +574,7 @@ async function addToCart(id, emoji, nombre) {
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify({ carrito_id: carritoId, producto_id: id, comprado: false })
     });
-    cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: tiendaDelProducto, itemId: item[0].id };
+    cart[id] = { emoji: emoji || '🛒', nombre, tiendaId: tiendaDelProducto, itemId: item[0].id, carritoId };
     cartBought[id] = false;
     const el = document.getElementById('ci-' + id);
     if (el) el.classList.add('gone');
@@ -601,27 +602,37 @@ async function loadCarritoActivo() {
   try {
     const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc');
     if (!carritos || carritos.length === 0) return;
-    // Cargar items de todos los carritos activos
     const carritoIds = carritos.map(c => c.id);
     const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji,tienda_id)`);
     if (!items || items.length === 0) return;
-    // Mapear carritoId → tiendaId
     const carritoTienda = {};
     carritos.forEach(c => { carritoTienda[c.id] = c.tienda_id; });
+    // Mapa de carritoId por tienda
+    const carritosPorTienda = {};
+    carritos.forEach(c => { carritosPorTienda[c.tienda_id] = c.id; });
     items.forEach(item => {
       const prod = item.jd_productos;
       if (!prod) return;
+      const tiendaId = carritoTienda[item.carrito_id] || prod.tienda_id;
       cart[item.producto_id] = {
         emoji: prod.emoji || '🛒',
         nombre: prod.nombre,
-        tiendaId: carritoTienda[item.carrito_id] || prod.tienda_id,
+        tiendaId,
         itemId: item.id,
         carritoId: item.carrito_id
       };
       cartBought[item.producto_id] = item.comprado || false;
     });
-    // Usar el carrito más reciente como activo
-    carritoActivoId = carritos[0].id;
+    // Setear dropdown en "todas" para mostrar todo el carrito
+    currentTiendaId = 'todas';
+    const sel = document.getElementById('store-select');
+    if (sel) sel.value = 'todas';
+    document.getElementById('store-label').textContent = 'Todas';
+    // Colapsar catálogo
+    document.getElementById('body-catalogo')?.classList.add('hidden');
+    document.getElementById('chev-catalogo')?.classList.remove('open');
+    // Guardar mapa de carritos por tienda para reutilizar
+    window._carritosPorTienda = carritosPorTienda;
     renderCart();
     if (Object.keys(cart).length > 0) showToast('🛒 Carrito restaurado');
   } catch(e) {}
@@ -630,7 +641,6 @@ async function loadCarritoActivo() {
 function renderCart() {
   const grid = document.getElementById('cart-grid');
   const allKeys = Object.keys(cart);
-  // Filtrar por tienda seleccionada
   const keys = currentTiendaId === 'todas'
     ? allKeys
     : allKeys.filter(id => cart[id].tiendaId === currentTiendaId);
@@ -652,6 +662,7 @@ function renderCart() {
     const tiendaNombre = mostrarTienda ? (tiendas.find(t => t.id === item.tiendaId)?.nombre || '') : '';
     return `<div class="cart-item${bought ? ' bought' : ''}" onclick="toggleBought('${id}')">
       <div class="check-overlay">${bought ? '✓' : ''}</div>
+      <button class="cart-remove-btn" onclick="event.stopPropagation();removeFromCart('${id}')" title="Quitar">✕</button>
       <div class="cat-emoji">${item.emoji}</div>
       <div class="cat-name">${item.nombre}</div>
       ${mostrarTienda ? `<div class="cart-tienda-lbl">${tiendaNombre}</div>` : ''}
@@ -660,12 +671,27 @@ function renderCart() {
   document.getElementById('fin-wrap').classList.remove('hidden');
 }
 
+async function removeFromCart(id) {
+  if (!cart[id]) return;
+  try {
+    const itemId = cart[id].itemId;
+    if (itemId) await supaFetch(`jd_carrito_items?id=eq.${itemId}`, { method: 'DELETE' });
+    const el = document.getElementById('ci-' + id);
+    if (el) el.classList.remove('gone');
+    delete cart[id];
+    delete cartBought[id];
+    renderCart();
+  } catch(e) { showToast('Error al quitar producto', true); }
+}
+
 async function finalizarCompra() {
   const keys = Object.keys(cart);
   if (keys.length === 0) return;
   try {
-    if (carritoActivoId) {
-      await supaFetch(`jd_carritos?id=eq.${carritoActivoId}`, {
+    // Finalizar todos los carritos activos
+    const carritoIds = [...new Set(keys.map(id => cart[id].carritoId).filter(Boolean))];
+    for (const cid of carritoIds) {
+      await supaFetch(`jd_carritos?id=eq.${cid}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'finalizado', fecha_finalizada: new Date().toISOString() })
       });
@@ -674,7 +700,7 @@ async function finalizarCompra() {
       const el = document.getElementById('ci-' + id);
       if (el) el.classList.remove('gone');
     });
-    cart = {}; cartBought = {}; carritoActivoId = null;
+    cart = {}; cartBought = {}; carritoActivoId = null; window._carritosPorTienda = {};
     renderCart();
     showToast('🎉 ¡Compra guardada en historial!');
   } catch(e) { showToast('Error al finalizar compra', true); }

@@ -489,11 +489,8 @@ async function onStoreChange() {
   if (currentTiendaId === 'todas') {
     document.getElementById('store-label').textContent = 'Todas';
     document.getElementById('cat-store-label').textContent = '';
-    // Colapsar catálogo, solo mostrar carrito filtrado
-    const bodyC = document.getElementById('body-catalogo');
-    const chevC = document.getElementById('chev-catalogo');
-    bodyC.classList.add('hidden');
-    chevC.classList.remove('open');
+    document.getElementById('body-catalogo')?.classList.add('hidden');
+    document.getElementById('chev-catalogo')?.classList.remove('open');
     renderCart();
     toggleSec('tienda');
     return;
@@ -501,11 +498,8 @@ async function onStoreChange() {
   const tienda = tiendas.find(t => t.id === currentTiendaId);
   document.getElementById('store-label').textContent = tienda ? tienda.nombre : '';
   document.getElementById('cat-store-label').textContent = tienda ? tienda.nombre : '';
-  // Asegurar catálogo visible
-  const bodyC = document.getElementById('body-catalogo');
-  const chevC = document.getElementById('chev-catalogo');
-  bodyC.classList.remove('hidden');
-  chevC.classList.add('open');
+  document.getElementById('body-catalogo')?.classList.remove('hidden');
+  document.getElementById('chev-catalogo')?.classList.add('open');
   toggleSec('tienda');
   await loadCatalogo(currentTiendaId);
   renderCart();
@@ -743,8 +737,10 @@ async function submitProduct() {
 async function loadTareas() {
   try {
     const data = await supaFetch('jd_tareas?status=eq.pendiente&order=fecha_creada');
-    tareas = data.filter(t => !t.es_recurrente);
     recurrentes = data.filter(t => t.es_recurrente);
+    // Tareas normales + recurrentes activas (para mostrarlas en su sección)
+    const recurrentesActivas = recurrentes.filter(t => t.recurrente_activa);
+    tareas = [...data.filter(t => !t.es_recurrente), ...recurrentesActivas];
     renderTareas();
     renderRecurrentes();
     checkOldTareas();
@@ -783,20 +779,24 @@ function renderRecurrentes() {
   const cats = ['trabajo', 'hogar', 'ideas'];
   const labels = { trabajo: 'badge-orange', hogar: 'badge-green', ideas: 'badge-pink' };
   const nombres = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '💡 Ideas' };
-  cats.forEach(cat => {
-    const grupo = recurrentes.filter(t => t.categoria === cat);
-    if (grupo.length === 0) return;
-    grupo.forEach(t => {
-      const div = document.createElement('div');
-      div.className = 'rec-row';
-      div.innerHTML = `
-        <div class="rec-toggle${t.recurrente_activa ? ' on' : ''}" id="rec-toggle-${t.id}" onclick="toggleRecurrente('${t.id}',this)">
-          ${t.recurrente_activa ? '✓' : ''}
-        </div>
-        <div class="rec-name">${t.nombre}</div>
-        <span class="rec-cat ${labels[cat]}">${nombres[cat]}</span>`;
-      list.appendChild(div);
-    });
+  // Filtrar recurrentes por categoría activa
+  const filtrados = currentFilter === 'todos'
+    ? recurrentes
+    : recurrentes.filter(t => t.categoria === currentFilter);
+  if (filtrados.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:14px;">No hay recurrentes en esta categoría</div>';
+    return;
+  }
+  filtrados.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'rec-row';
+    div.innerHTML = `
+      <div class="rec-toggle${t.recurrente_activa ? ' on' : ''}" id="rec-toggle-${t.id}" onclick="toggleRecurrente('${t.id}',this)">
+        ${t.recurrente_activa ? '✓' : ''}
+      </div>
+      <div class="rec-name">${t.nombre}</div>
+      <span class="rec-cat ${labels[t.categoria]}">${nombres[t.categoria]}</span>`;
+    list.appendChild(div);
   });
 }
 
@@ -819,6 +819,7 @@ function setFilter(cat, el) {
   document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
   if (el) el.classList.add('on');
   applyFilter();
+  renderRecurrentes();
 }
 
 function applyFilter() {

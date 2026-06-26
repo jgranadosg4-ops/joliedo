@@ -646,7 +646,7 @@ function renderCatalogo() {
   // Botón nuevo
   const addDiv = document.createElement('div');
   addDiv.className = 'cat-add';
-  addDiv.onclick = openProdModal;
+  addDiv.setAttribute('onclick', 'openProdModal()');
   addDiv.innerHTML = `<div class="cat-add-icon">+</div><div class="cat-add-lbl">Nuevo</div>`;
   grid.appendChild(addDiv);
 }
@@ -826,14 +826,52 @@ async function finalizarCompra() {
 }
 
 // MODAL NUEVO PRODUCTO
+let selectedCategoria = '';
+
 function openProdModal() {
   document.getElementById('prod-nombre').value = '';
-  document.getElementById('prod-categoria').value = '';
+  document.getElementById('prod-categoria-nueva').value = '';
+  document.getElementById('prod-categoria-nueva').classList.add('hidden');
   selectedEmoji = '🛒';
+  selectedCategoria = '';
   document.querySelectorAll('.ep-item').forEach(e => e.classList.remove('sel'));
-  document.querySelector('.ep-item').classList.add('sel');
+  const firstEmoji = document.querySelector('.ep-item');
+  if (firstEmoji) firstEmoji.classList.add('sel');
+  // Categorías fijas del catálogo
+  const categoriasBase = ['Agua','Carnes','Condimentos','Congelados','Despensa','Dulcería','Enlatados','Frutas','Higiene','Hogar y cocina','Lácteos','Limpieza','Mascotas','Panadería','Ropa','Salud','Varios','Verduras'];
+  const todosProds = Object.values(productos).flat();
+  const catsUsadas = [...new Set(todosProds.map(p => p.categoria).filter(Boolean))];
+  const cats = [...new Set([...categoriasBase, ...catsUsadas])].sort();
+  const catGrid = document.getElementById('cat-select-grid');
+  if (catGrid) {
+    catGrid.innerHTML = cats.map(c => `<div class="cat-sel-btn" onclick="selectCategoriaProd(this,'${c}')">${c}</div>`).join('') +
+      '<div class="cat-sel-btn" onclick="selectCategoriaProd(this,\'nueva\')">+ Nueva</div>';
+  }
+  // Selector de tiendas
+  const tiendaGrid = document.getElementById('tienda-check-grid');
+  if (tiendaGrid) {
+    tiendaGrid.innerHTML = tiendas.map(t => {
+      const presel = currentTiendaId !== 'todas' && currentTiendaId === t.id ? ' on' : '';
+      return `<div class="cat-sel-btn tienda-check-btn${presel}" data-tienda-id="${t.id}" onclick="toggleTiendaCheck(this)">${t.nombre}</div>`;
+    }).join('');
+  }
   document.getElementById('product-modal').classList.remove('hidden');
 }
+
+function selectCategoriaProd(el, cat) {
+  document.querySelectorAll('.cat-sel-btn:not(.tienda-check-btn)').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  if (cat === 'nueva') {
+    document.getElementById('prod-categoria-nueva').classList.remove('hidden');
+    selectedCategoria = '';
+  } else {
+    document.getElementById('prod-categoria-nueva').classList.add('hidden');
+    selectedCategoria = cat;
+  }
+}
+
+function toggleTiendaCheck(el) { el.classList.toggle('on'); }
+
 function closeProdModal() { document.getElementById('product-modal').classList.add('hidden'); }
 function selectEmoji(el, emoji) {
   document.querySelectorAll('.ep-item').forEach(e => e.classList.remove('sel'));

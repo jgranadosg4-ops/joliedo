@@ -54,9 +54,16 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .sec-body { border-top: 1px solid var(--border); }
 .sec-body.hidden { display: none; }
 
-/* DROPDOWN TIENDA */
-.store-select { width: 100%; background: var(--bg); color: var(--text); border: none; padding: 14px; font-size: 14px; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239999bb' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
-.store-select option { background: var(--bg2); }
+/* TIENDAS CUADRITOS */
+.stores-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; padding: 10px; }
+.store-chip { background: var(--bg); border-radius: 10px; border: 1.5px solid var(--border); padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.15s; }
+.store-chip.sel { border-color: var(--purple); background: rgba(127,119,221,0.12); }
+.store-chip-icon { font-size: 20px; width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; }
+.store-chip-name { font-size: 10px; color: var(--text2); text-align: center; line-height: 1.2; }
+.store-chip.sel .store-chip-name { color: var(--purple); }
+.cat-select-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-sel-btn { padding: 6px 12px; border-radius: 16px; font-size: 11px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); cursor: pointer; }
+.cat-sel-btn.on { border-color: var(--purple); background: rgba(127,119,221,0.15); color: var(--purple); }
 
 /* GRID CATÁLOGO Y CARRITO */
 .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
@@ -215,10 +222,9 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
       <span class="chevron open" id="chev-tienda">▾</span>
     </div>
     <div class="sec-body" id="body-tienda">
-      <select class="store-select" id="store-select" onchange="onStoreChange()">
-        <option value="">— Elige una tienda —</option>
-      </select>
+      <div class="stores-grid" id="stores-grid"></div>
     </div>
+  </div>
   </div>
 
   <!-- CATÁLOGO -->
@@ -383,8 +389,66 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     </div>
     <div class="form-group">
       <label class="form-label">Emoji</label>
-      <div class="emoji-picker" id="emoji-picker">
+            <div class="emoji-picker" id="emoji-picker" style="grid-template-columns:repeat(8,1fr)">
         <div class="ep-item sel" onclick="selectEmoji(this,'🛒')">🛒</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥩')">🥩</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍗')">🍗</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🐟')">🐟</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥛')">🥛</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧀')">🧀</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥚')">🥚</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍞')">🍞</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥬')">🥬</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍅')">🍅</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍌')">🍌</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍎')">🍎</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫒')">🫒</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧴')">🧴</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧻')">🧻</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💊')">💊</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫙')">🫙</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥫')">🥫</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧼')">🧼</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫧')">🫧</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💧')">💧</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍫')">🍫</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍬')">🍬</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥜')">🥜</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🌭')">🌭</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍖')">🍖</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧅')">🧅</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧄')">🧄</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧂')">🧂</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🌿')">🌿</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥣')">🥣</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍯')">🍯</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥒')">🥒</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥗')">🥗</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍍')">🍍</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫘')">🫘</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥤')">🥤</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍿')">🍿</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🩲')">🩲</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🐾')">🐾</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💈')">💈</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🚽')">🚽</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🪥')">🪥</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍽')">🍽</div>
+        <div class="ep-item" onclick="selectEmoji(this,'👕')">👕</div>
+        <div class="ep-item" onclick="selectEmoji(this,'📦')">📦</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🌽')">🌽</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🥦')">🥦</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🫓')">🫓</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧃')">🧃</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍇')">🍇</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🧈')">🧈</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🍪')">🍪</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💧')">💧</div>
+        <div class="ep-item" onclick="selectEmoji(this,'🏠')">🏠</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💼')">💼</div>
+        <div class="ep-item" onclick="selectEmoji(this,'💡')">💡</div>
+        <div class="ep-item" onclick="selectEmoji(this,'✅')">✅</div>
+      </div>
         <div class="ep-item" onclick="selectEmoji(this,'🥩')">🥩</div>
         <div class="ep-item" onclick="selectEmoji(this,'🍗')">🍗</div>
         <div class="ep-item" onclick="selectEmoji(this,'🐟')">🐟</div>
@@ -406,7 +470,8 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     </div>
     <div class="form-group">
       <label class="form-label">Categoría</label>
-      <input class="form-input" id="prod-categoria" placeholder="Ej. Carnes, Despensa..."/>
+      <div class="cat-select-grid" id="cat-select-grid"></div>
+      <input class="form-input hidden" id="prod-categoria-nueva" placeholder="Nueva categoría..." style="margin-top:8px;"/>
     </div>
     <button class="submit-btn" onclick="submitProduct()">Agregar al catálogo</button>
     <button class="cancel-btn" onclick="closeProdModal()">Cancelar</button>
@@ -471,39 +536,61 @@ function toggleSec(id) {
 async function loadTiendas() {
   try {
     tiendas = await supaFetch('jd_tiendas?order=orden');
-    const sel = document.getElementById('store-select');
-    sel.innerHTML = '<option value="">— Elige una tienda —</option><option value="todas">🛒 Todas las tiendas</option>';
-    tiendas.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = t.nombre;
-      sel.appendChild(opt);
-    });
+    renderStoreChips();
   } catch(e) { showToast('Error cargando tiendas', true); }
 }
 
-async function onStoreChange() {
-  const sel = document.getElementById('store-select');
-  currentTiendaId = sel.value;
-  if (!currentTiendaId) return;
-  if (currentTiendaId === 'todas') {
-    document.getElementById('store-label').textContent = 'Todas';
+const STORE_ICONS = {
+  'Costco': '🏪', 'Walmart': '🛍️', "Sam's Club": '🏬',
+  'Mercado / Local': '🧺', 'Amazon': '📦', 'Farmacia': '💊'
+};
+
+function renderStoreChips() {
+  const grid = document.getElementById('stores-grid');
+  if (!grid) return;
+  const all = [{ id: 'todas', nombre: 'Todas', emoji: '🛒' }, ...tiendas.map(t => ({ ...t, emoji: STORE_ICONS[t.nombre] || '🏪' }))];
+  grid.innerHTML = all.map(t => `
+    <div class="store-chip${currentTiendaId === t.id ? ' sel' : ''}" onclick="selectStoreChip('${t.id}','${t.nombre}')">
+      <div class="store-chip-icon">${t.emoji}</div>
+      <div class="store-chip-name">${t.nombre}</div>
+    </div>`).join('');
+}
+
+async function selectStoreChip(id, nombre) {
+  currentTiendaId = id;
+  renderStoreChips();
+  document.getElementById('store-label').textContent = nombre;
+  if (id === 'todas') {
     document.getElementById('cat-store-label').textContent = '';
-    document.getElementById('body-catalogo')?.classList.add('hidden');
-    document.getElementById('chev-catalogo')?.classList.remove('open');
+    await loadCatalogoTodas();
     renderCart();
-    toggleSec('tienda');
     return;
   }
-  const tienda = tiendas.find(t => t.id === currentTiendaId);
-  document.getElementById('store-label').textContent = tienda ? tienda.nombre : '';
-  document.getElementById('cat-store-label').textContent = tienda ? tienda.nombre : '';
+  document.getElementById('cat-store-label').textContent = nombre;
   document.getElementById('body-catalogo')?.classList.remove('hidden');
   document.getElementById('chev-catalogo')?.classList.add('open');
-  toggleSec('tienda');
-  await loadCatalogo(currentTiendaId);
+  await loadCatalogo(id);
   renderCart();
 }
+
+async function loadCatalogoTodas() {
+  const grid = document.getElementById('cat-grid');
+  grid.innerHTML = '<div class="loading">Cargando catálogo...</div>';
+  try {
+    // Cargar todos los productos de todas las tiendas
+    const todos = await supaFetch('jd_productos?activo=eq.true&order=nombre');
+    // Guardar en cache por tienda también
+    tiendas.forEach(t => {
+      if (!productos[t.id]) productos[t.id] = todos.filter(p => p.tienda_id === t.id);
+    });
+    productos['todas'] = todos;
+    renderCatalogo();
+    document.getElementById('body-catalogo')?.classList.remove('hidden');
+    document.getElementById('chev-catalogo')?.classList.add('open');
+  } catch(e) { grid.innerHTML = '<div class="empty-state">Error cargando catálogo</div>'; }
+}
+
+
 
 async function loadCatalogo(tiendaId) {
   const grid = document.getElementById('cat-grid');
@@ -617,11 +704,10 @@ async function loadCarritoActivo() {
       };
       cartBought[item.producto_id] = item.comprado || false;
     });
-    // Setear dropdown en "todas" para mostrar todo el carrito
+    // Setear en 'todas' para mostrar todo el carrito
     currentTiendaId = 'todas';
-    const sel = document.getElementById('store-select');
-    if (sel) sel.value = 'todas';
     document.getElementById('store-label').textContent = 'Todas';
+    setTimeout(renderStoreChips, 100);
     // Colapsar catálogo
     document.getElementById('body-catalogo')?.classList.add('hidden');
     document.getElementById('chev-catalogo')?.classList.remove('open');
@@ -717,16 +803,20 @@ function selectEmoji(el, emoji) {
 }
 async function submitProduct() {
   const nombre = document.getElementById('prod-nombre').value.trim();
-  const categoria = document.getElementById('prod-categoria').value.trim() || 'Varios';
+  const catNueva = document.getElementById('prod-categoria-nueva').value.trim();
+  const categoria = catNueva || selectedCategoria || 'Varios';
+  const tiendaId = currentTiendaId === 'todas' ? null : currentTiendaId;
   if (!nombre) { showToast('Escribe el nombre del producto', true); return; }
-  if (!currentTiendaId) { showToast('Selecciona una tienda primero', true); return; }
+  if (!tiendaId) { showToast('Selecciona una tienda específica primero', true); return; }
   try {
     const nuevos = await supaFetch('jd_productos', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ tienda_id: currentTiendaId, nombre, emoji: selectedEmoji, categoria })
+      body: JSON.stringify({ tienda_id: tiendaId, nombre, emoji: selectedEmoji, categoria })
     });
-    if (productos[currentTiendaId]) productos[currentTiendaId].push(nuevos[0]);
+    if (!productos[tiendaId]) productos[tiendaId] = [];
+    productos[tiendaId].push(nuevos[0]);
+    delete productos['todas']; // invalidar cache de todas
     renderCatalogo();
     closeProdModal();
     showToast('Producto agregado al catálogo ✨');
@@ -820,6 +910,7 @@ function setFilter(cat, el) {
   if (el) el.classList.add('on');
   applyFilter();
   renderRecurrentes();
+  renderCompletadas();
 }
 
 function applyFilter() {
@@ -864,12 +955,18 @@ function addToCompleted(nombre, cat) {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   completadas.push({ nombre, cat, timeStr });
+  renderCompletadas();
+}
+
+function renderCompletadas() {
   const list = document.getElementById('list-completadas');
-  const div = document.createElement('div');
-  div.className = 'done-task';
-  div.innerHTML = `<div class="done-check">✓</div><div class="done-name">${labels[cat]||''} ${nombre}</div><div class="done-date">${timeStr}</div>`;
-  list.prepend(div);
-  document.getElementById('sec-completadas').classList.remove('hidden');
+  const filtradas = currentFilter === 'todos' ? completadas : completadas.filter(c => c.categoria === currentFilter || c.cat === currentFilter);
+  const labels = { trabajo: '💼', hogar: '🏠', ideas: '💡' };
+  list.innerHTML = filtradas.map(c =>
+    `<div class="done-task"><div class="done-check">✓</div><div class="done-name">${labels[c.cat]||''} ${c.nombre}</div><div class="done-date">${c.timeStr}</div></div>`
+  ).join('');
+  const hasItems = completadas.length > 0;
+  document.getElementById('sec-completadas').classList.toggle('hidden', !hasItems);
   document.getElementById('cnt-completadas').textContent = completadas.length;
 }
 

@@ -994,9 +994,17 @@ function renderTareas() {
     filtradas.forEach(t => {
       let diasPasados = 0;
       if (t.fecha_creada) {
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-        const creada = new Date(t.fecha_creada); creada.setHours(0,0,0,0);
-        diasPasados = Math.floor((hoy - creada) / 86400000);
+        const hoy = new Date();
+        const hoyStr = hoy.toLocaleDateString('es-MX');
+        const creada = new Date(t.fecha_creada);
+        const creadaStr = creada.toLocaleDateString('es-MX');
+        if (hoyStr === creadaStr) {
+          diasPasados = 0;
+        } else {
+          const hoyMid = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+          const creadaMid = new Date(creada.getFullYear(), creada.getMonth(), creada.getDate());
+          diasPasados = Math.floor((hoyMid - creadaMid) / 86400000);
+        }
       }
       const isOld = diasPasados >= 7;
       const avance = t.avance || 0;

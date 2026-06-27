@@ -811,7 +811,7 @@ function openProdModal() {
   const firstEmoji = document.querySelector('.ep-item');
   if (firstEmoji) firstEmoji.classList.add('sel');
   // Categorías fijas del catálogo
-  const cats = ['Despensa', 'Lácteos', 'Limpieza e higiene', 'Otros', 'Proteínas'];
+  const cats = ['Despensa', 'Lácteos', 'Limpieza / Higiene / Salud', 'Otros', 'Proteínas'];
   const catGrid = document.getElementById('cat-select-grid');
   if (catGrid) {
     catGrid.innerHTML = cats.map(c =>
@@ -878,7 +878,7 @@ async function submitProduct() {
     renderCatalogo();
     closeProdModal();
     showToast('Producto agregado al catálogo ✨');
-  } catch(e) { showToast('Error al guardar', true); }
+  } catch(e) { console.error('submitProduct error:', e.message); showToast('Error: ' + e.message.substring(0,50), true); }
 }
 
 // ---- PENDIENTES ----
@@ -1097,7 +1097,7 @@ async function submitTask() {
     renderTareas();
     closeTaskModal();
     showToast('Tarea agregada ✨');
-  } catch(e) { showToast('Error al guardar', true); }
+  } catch(e) { console.error('submitProduct error:', e.message); showToast('Error: ' + e.message.substring(0,50), true); }
 }
 
 // ---- HISTORIAL ----

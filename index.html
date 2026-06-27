@@ -654,7 +654,7 @@ function renderCatalogo() {
       pressTimer = setTimeout(() => {
         didLongPress = true;
         showDeleteMenu(p.id, p.nombre, div);
-      }, 1100);
+      }, 3000);
     });
     div.addEventListener('touchend', (e) => {
       clearTimeout(pressTimer);
@@ -664,7 +664,7 @@ function renderCatalogo() {
     div.addEventListener('touchmove', () => { clearTimeout(pressTimer); didLongPress = false; });
     div.addEventListener('mousedown', () => {
       didLongPress = false;
-      pressTimer = setTimeout(() => { didLongPress = true; showDeleteMenu(p.id, p.nombre, div); }, 1100);
+      pressTimer = setTimeout(() => { didLongPress = true; showDeleteMenu(p.id, p.nombre, div); }, 3000);
     });
     div.addEventListener('click', (e) => {
       if (didLongPress) { didLongPress = false; e.preventDefault(); e.stopPropagation(); return; }

@@ -133,6 +133,33 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .done-date { font-size: 10px; color: var(--text2); flex-shrink: 0; }
 .limpiar-btn { margin: 8px 12px 10px; padding: 8px; background: rgba(226,75,74,0.06); border: 1px solid rgba(226,75,74,0.2); border-radius: 10px; color: var(--red); font-size: 12px; text-align: center; cursor: pointer; }
 
+/* PROGRESO */
+.progress-bar-wrap { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.progress-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 6px; flex-shrink: 0; }
+.p0 { background: rgba(255,255,255,0.08); color: var(--text2); }
+.p25 { background: rgba(239,159,39,0.15); color: var(--amber); }
+.p50 { background: rgba(239,159,39,0.2); color: var(--amber); }
+.p80 { background: rgba(127,119,221,0.2); color: var(--purple); }
+.p100 { background: rgba(29,158,117,0.2); color: var(--teal); }
+
+/* PRIORIDAD */
+.prio-badge { font-size: 11px; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+.prio-1 { background: rgba(226,75,74,0.2); color: var(--red); }
+.prio-2 { background: rgba(239,159,39,0.2); color: var(--amber); }
+.prio-3 { background: rgba(127,119,221,0.2); color: var(--purple); }
+.prio-none { background: rgba(255,255,255,0.06); color: var(--text2); font-size: 14px; }
+
+/* DETALLE TAREA */
+.task-detail { background: rgba(255,255,255,0.03); border-top: 1px solid var(--border); padding: 10px 12px; display: none; }
+.task-detail.show { display: block; }
+.task-detail-label { font-size: 11px; color: var(--text2); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+.avance-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.avance-btn { padding: 5px 12px; border-radius: 16px; font-size: 12px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); cursor: pointer; }
+.avance-btn.on { border-color: var(--purple); background: rgba(127,119,221,0.15); color: var(--purple); font-weight: 600; }
+.consideraciones-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; resize: none; min-height: 60px; font-family: inherit; }
+.consideraciones-input:focus { border-color: var(--purple); }
+
 /* HISTORIAL */
 .subtabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .stab { flex: 1; padding: 9px; border-radius: 11px; font-size: 12px; text-align: center; border: 1px solid var(--border); color: var(--text2); cursor: pointer; transition: all 0.15s; }
@@ -372,8 +399,12 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Nombre de la tarea *</label>
+      <label class="form-label">Nombre *</label>
       <input class="form-input" id="task-nombre" placeholder="¿Qué tienes que hacer?"/>
+    </div>
+    <div class="form-group" id="task-consideraciones-group" style="display:none;">
+      <label class="form-label">Consideraciones <span style="color:var(--text2);font-weight:400;">(opcional)</span></label>
+      <textarea class="consideraciones-input" id="task-consideraciones" placeholder="Notas, contexto, detalles..."></textarea>
     </div>
     <button class="submit-btn" onclick="submitTask()">Guardar tarea</button>
     <button class="cancel-btn" onclick="closeTaskModal()">Cancelar</button>
@@ -932,28 +963,81 @@ async function loadTareas() {
   } catch(e) { showToast('Error cargando tareas', true); }
 }
 
+function getProgressColor(avance) {
+  if (avance >= 100) return '#1D9E75';
+  if (avance >= 80) return '#7F77DD';
+  if (avance >= 50) return '#EF9F27';
+  if (avance >= 25) return '#EF9F27';
+  return 'rgba(255,255,255,0.15)';
+}
+
+function getPrioLabel(p) {
+  if (p === 1) return '<span class="prio-badge prio-1">1</span>';
+  if (p === 2) return '<span class="prio-badge prio-2">2</span>';
+  if (p === 3) return '<span class="prio-badge prio-3">3</span>';
+  return '';
+}
+
 function renderTareas() {
   const cats = ['trabajo', 'hogar', 'ideas'];
   cats.forEach(cat => {
     const list = document.getElementById('list-' + cat);
-    const filtradas = tareas.filter(t => t.categoria === cat);
+    const filtradas = tareas
+      .filter(t => t.categoria === cat)
+      .sort((a,b) => {
+        // Prioridades arriba
+        const pa = a.prioridad || 99, pb = b.prioridad || 99;
+        return pa - pb;
+      });
     document.getElementById('cnt-' + cat).textContent = filtradas.length;
     list.innerHTML = '';
     filtradas.forEach(t => {
       const diasPasados = t.fecha_creada ? Math.floor((Date.now() - new Date(t.fecha_creada)) / 86400000) : 0;
       const isOld = diasPasados >= 7;
+      const avance = t.avance || 0;
+      const isHogar = cat === 'hogar';
       const div = document.createElement('div');
       div.className = 'task-row' + (isOld ? ' old' : '');
       div.id = 'task-' + t.id;
-      div.innerHTML = `
-        <div class="tcheck" onclick="completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)"></div>
-        <div style="flex:1">
-          <div class="task-text">${t.nombre}</div>
-          ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">Agregado hace ${diasPasados} día${diasPasados===1?'':'s'}</div>`}
-        </div>`;
+
+      if (isHogar) {
+        // Hogar: simple, tap directo para completar
+        div.innerHTML = `
+          <div class="tcheck" onclick="completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)"></div>
+          <div style="flex:1">
+            <div class="task-text">${t.nombre}</div>
+            ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">Hace ${diasPasados} día${diasPasados===1?'':'s'}</div>`}
+          </div>`;
+      } else {
+        // Trabajo e Ideas: con prioridad, progreso y detalle expandible
+        const badgeClass = 'p' + avance;
+        div.innerHTML = `
+          <div class="tcheck" onclick="completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)"></div>
+          <div style="flex:1;cursor:pointer;" onclick="toggleTaskDetail('${t.id}')">
+            <div style="display:flex;align-items:center;gap:6px;">
+              ${getPrioLabel(t.prioridad)}
+              <div class="task-text" style="flex:1;">${t.nombre}</div>
+              <span class="progress-badge ${badgeClass}">${avance}%</span>
+            </div>
+            ${avance > 0 ? `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${avance}%;background:${getProgressColor(avance)};"></div></div>` : ''}
+            ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">Hace ${diasPasados} día${diasPasados===1?'':'s'}</div>`}
+          </div>
+          <div class="task-detail" id="detail-${t.id}">
+            <div class="task-detail-label">% de avance</div>
+            <div class="avance-btns">
+              ${[0,25,50,80,100].map(v => `<div class="avance-btn${avance===v?' on':''}" onclick="setAvance('${t.id}',${v},this)">${v}%</div>`).join('')}
+            </div>
+            <div class="task-detail-label">Consideraciones</div>
+            <textarea class="consideraciones-input" id="cons-${t.id}" placeholder="Notas, detalles, contexto..." onblur="saveConsideraciones('${t.id}',this.value)">${t.consideraciones || ''}</textarea>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+              <div class="task-detail-label" style="margin:0;">Prioridad</div>
+              ${[1,2,3].map(p => `<div class="prio-badge prio-${p}${t.prioridad===p?' sel':''}" style="${t.prioridad===p?'box-shadow:0 0 0 2px white;':''}" onclick="setPrioridad('${t.id}',${p},this)">${p}</div>`).join('')}
+              ${t.prioridad ? `<div class="prio-badge prio-none" onclick="setPrioridad('${t.id}',null,this)" title="Quitar prioridad">✕</div>` : ''}
+            </div>
+          </div>`;
+      }
       list.appendChild(div);
     });
-    // Aplicar filtro
     applyFilter();
   });
 }
@@ -1108,10 +1192,13 @@ async function toggleRecurrente(id, el) {
 function openNewTask(cat) {
   currentTaskCat = cat;
   document.getElementById('task-nombre').value = '';
+  if (document.getElementById('task-consideraciones')) document.getElementById('task-consideraciones').value = '';
   document.getElementById('task-modal-title').textContent = cat === 'ideas' ? 'Nueva idea' : 'Nueva tarea';
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   const idx = ['trabajo','hogar','ideas'].indexOf(cat);
   document.querySelectorAll('.cat-btn')[idx]?.classList.add('active');
+  const consGroup = document.getElementById('task-consideraciones-group');
+  if (consGroup) consGroup.style.display = (cat !== 'hogar') ? '' : 'none';
   document.getElementById('task-modal').classList.remove('hidden');
 }
 function openNewRecurrente() { openNewTask('hogar'); }
@@ -1120,6 +1207,9 @@ function setTaskCat(cat, el) {
   currentTaskCat = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
+  // Mostrar consideraciones solo en Trabajo e Ideas
+  const consGroup = document.getElementById('task-consideraciones-group');
+  if (consGroup) consGroup.style.display = (cat !== 'hogar') ? '' : 'none';
 }
 async function submitTask() {
   const nombre = document.getElementById('task-nombre').value.trim();
@@ -1267,6 +1357,78 @@ function addProductoAlCarrito(id, nombre, emoji) {
   renderCart();
   setTab('compras', document.querySelector('.tab'));
   showToast(`${emoji} ${nombre} agregado al carrito`);
+}
+
+// ---- DETALLE DE TAREA ----
+function toggleTaskDetail(id) {
+  const detail = document.getElementById('detail-' + id);
+  if (!detail) return;
+  detail.classList.toggle('show');
+}
+
+async function setAvance(id, valor, el) {
+  // Actualizar UI
+  el.closest('.avance-btns').querySelectorAll('.avance-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  // Actualizar en memoria
+  const t = tareas.find(x => x.id === id);
+  if (t) t.avance = valor;
+  // Si llega a 100% completar automáticamente
+  if (valor === 100) {
+    setTimeout(() => {
+      const checkEl = document.querySelector(`#task-${id} .tcheck`);
+      if (checkEl) completeTask(id, t.nombre, t.categoria, checkEl);
+    }, 500);
+    return;
+  }
+  // Guardar en Supabase
+  try {
+    await supaFetch(`jd_tareas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ avance: valor }) });
+    // Actualizar barra de progreso sin re-renderizar todo
+    const row = document.getElementById('task-' + id);
+    if (row) {
+      let bar = row.querySelector('.progress-bar-fill');
+      let wrap = row.querySelector('.progress-bar-wrap');
+      const badge = row.querySelector('.progress-badge');
+      if (badge) { badge.className = 'progress-badge p' + valor; badge.textContent = valor + '%'; }
+      if (valor > 0) {
+        if (!wrap) {
+          wrap = document.createElement('div'); wrap.className = 'progress-bar-wrap';
+          bar = document.createElement('div'); bar.className = 'progress-bar-fill';
+          wrap.appendChild(bar);
+          row.querySelector('[style*="flex:1"]')?.appendChild(wrap);
+        }
+        if (bar) { bar.style.width = valor + '%'; bar.style.background = getProgressColor(valor); }
+      } else if (wrap) { wrap.remove(); }
+    }
+  } catch(e) {}
+}
+
+async function saveConsideraciones(id, valor) {
+  const t = tareas.find(x => x.id === id);
+  if (t) t.consideraciones = valor;
+  try {
+    await supaFetch(`jd_tareas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ consideraciones: valor }) });
+  } catch(e) {}
+}
+
+async function setPrioridad(id, valor, el) {
+  // Verificar límite de 3 prioridades
+  if (valor !== null) {
+    const conPrio = tareas.filter(t => t.prioridad && t.id !== id).length;
+    if (conPrio >= 3) { showToast('Máximo 3 prioridades activas', true); return; }
+  }
+  const t = tareas.find(x => x.id === id);
+  if (t) t.prioridad = valor;
+  try {
+    await supaFetch(`jd_tareas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ prioridad: valor }) });
+    renderTareas();
+    // Reabrir el detalle
+    setTimeout(() => {
+      const detail = document.getElementById('detail-' + id);
+      if (detail) detail.classList.add('show');
+    }, 50);
+  } catch(e) {}
 }
 
 // ---- ELIMINAR PRODUCTO ----

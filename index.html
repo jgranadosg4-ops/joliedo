@@ -175,7 +175,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 
 /* MODAL NUEVO PRODUCTO */
 .emoji-picker { display: grid; grid-template-columns: repeat(6,1fr); gap: 6px; margin-top: 8px; }
-.ep-item { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+.ep-item { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; flex-shrink: 0; }
 .ep-item.sel { border-color: var(--purple); background: rgba(127,119,221,0.2); }
 
 /* TOAST */
@@ -383,12 +383,17 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     <div class="modal-handle"></div>
     <div class="modal-title">Nuevo producto</div>
     <div class="form-group">
-      <label class="form-label">Nombre del producto *</label>
+      <label class="form-label">Nombre *</label>
       <input class="form-input" id="prod-nombre" placeholder="Ej. Aguacate"/>
     </div>
     <div class="form-group">
+      <label class="form-label">Categoría</label>
+      <div class="cat-btns" id="cat-select-grid"></div>
+      <input class="form-input hidden" id="prod-categoria-nueva" placeholder="Nueva categoría..." style="margin-top:8px;"/>
+    </div>
+    <div class="form-group">
       <label class="form-label">Emoji</label>
-            <div class="emoji-picker" id="emoji-picker" style="grid-template-columns:repeat(8,1fr)">
+      <div class="cat-btns" id="emoji-picker" style="flex-wrap:wrap;">
         <div class="ep-item sel" onclick="selectEmoji(this,'🛒')">🛒</div>
         <div class="ep-item" onclick="selectEmoji(this,'🥩')">🥩</div>
         <div class="ep-item" onclick="selectEmoji(this,'🍗')">🍗</div>
@@ -430,51 +435,19 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
         <div class="ep-item" onclick="selectEmoji(this,'🩲')">🩲</div>
         <div class="ep-item" onclick="selectEmoji(this,'🐾')">🐾</div>
         <div class="ep-item" onclick="selectEmoji(this,'💈')">💈</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🚽')">🚽</div>
         <div class="ep-item" onclick="selectEmoji(this,'🪥')">🪥</div>
         <div class="ep-item" onclick="selectEmoji(this,'🍽')">🍽</div>
         <div class="ep-item" onclick="selectEmoji(this,'👕')">👕</div>
         <div class="ep-item" onclick="selectEmoji(this,'📦')">📦</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🌽')">🌽</div>
         <div class="ep-item" onclick="selectEmoji(this,'🥦')">🥦</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🫓')">🫓</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🧃')">🧃</div>
         <div class="ep-item" onclick="selectEmoji(this,'🍇')">🍇</div>
         <div class="ep-item" onclick="selectEmoji(this,'🧈')">🧈</div>
         <div class="ep-item" onclick="selectEmoji(this,'🍪')">🍪</div>
-        <div class="ep-item" onclick="selectEmoji(this,'💧')">💧</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🏠')">🏠</div>
-        <div class="ep-item" onclick="selectEmoji(this,'💼')">💼</div>
-        <div class="ep-item" onclick="selectEmoji(this,'💡')">💡</div>
-        <div class="ep-item" onclick="selectEmoji(this,'✅')">✅</div>
-      </div>
-        <div class="ep-item" onclick="selectEmoji(this,'🥩')">🥩</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🍗')">🍗</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🐟')">🐟</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🥛')">🥛</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🧀')">🧀</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🥚')">🥚</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🍞')">🍞</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🥬')">🥬</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🍅')">🍅</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🍌')">🍌</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🍎')">🍎</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🫒')">🫒</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🧴')">🧴</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🧻')">🧻</div>
-        <div class="ep-item" onclick="selectEmoji(this,'💊')">💊</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🫙')">🫙</div>
-        <div class="ep-item" onclick="selectEmoji(this,'🥫')">🥫</div>
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Categoría</label>
-      <div id="cat-select-grid" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;"></div>
-      <input class="form-input hidden" id="prod-categoria-nueva" placeholder="Nueva categoría..." style="margin-top:8px;"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">¿En qué tiendas lo compras? *</label>
-      <div class="cat-select-grid" id="tienda-check-grid"></div>
+      <label class="form-label">¿En qué tiendas? *</label>
+      <div class="cat-btns" id="tienda-check-grid"></div>
     </div>
     <button class="submit-btn" onclick="submitProduct()">Agregar al catálogo</button>
     <button class="cancel-btn" onclick="closeProdModal()">Cancelar</button>

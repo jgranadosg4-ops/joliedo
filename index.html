@@ -993,17 +993,20 @@ function renderTareas() {
     list.innerHTML = '';
     filtradas.forEach(t => {
       let diasPasados = 0;
+      let diasLabel = 'Hoy';
       if (t.fecha_creada) {
+        // Usar solo la parte de fecha (YYYY-MM-DD) ignorando zona horaria
+        const fechaStr = t.fecha_creada.substring(0, 10);
         const hoy = new Date();
-        const hoyStr = hoy.toLocaleDateString('es-MX');
-        const creada = new Date(t.fecha_creada);
-        const creadaStr = creada.toLocaleDateString('es-MX');
-        if (hoyStr === creadaStr) {
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+        if (fechaStr === hoyStr) {
           diasPasados = 0;
+          diasLabel = 'Hoy';
         } else {
-          const hoyMid = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-          const creadaMid = new Date(creada.getFullYear(), creada.getMonth(), creada.getDate());
-          diasPasados = Math.floor((hoyMid - creadaMid) / 86400000);
+          const creadaDate = new Date(fechaStr + 'T12:00:00');
+          const hoyDate = new Date(hoyStr + 'T12:00:00');
+          diasPasados = Math.round((hoyDate - creadaDate) / 86400000);
+          diasLabel = diasPasados === 1 ? 'Hace 1 día' : `Hace ${diasPasados} días`;
         }
       }
       const isOld = diasPasados >= 7;
@@ -1019,7 +1022,7 @@ function renderTareas() {
           <div class="tcheck" onclick="completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)"></div>
           <div style="flex:1">
             <div class="task-text">${t.nombre}</div>
-            ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">Hace ${diasPasados} día${diasPasados===1?'':'s'}</div>`}
+            ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">${diasLabel}</div>`}
           </div>`;
       } else {
         // Trabajo e Ideas: con prioridad, progreso y detalle expandible
@@ -1036,7 +1039,7 @@ function renderTareas() {
                 <span class="progress-badge ${badgeClass}" style="flex-shrink:0;">${avance}%</span>
               </div>
               ${avance > 0 ? `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${avance}%;background:${getProgressColor(avance)};"></div></div>` : ''}
-              ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">Hace ${diasPasados} día${diasPasados===1?'':'s'}</div>`}
+              ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">${diasLabel}</div>`}
             </div>
           </div>
           <div class="task-detail" id="detail-${t.id}">

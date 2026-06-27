@@ -995,19 +995,16 @@ function renderTareas() {
       let diasPasados = 0;
       let diasLabel = 'Hoy';
       if (t.fecha_creada) {
-        // Usar solo la parte de fecha (YYYY-MM-DD) ignorando zona horaria
-        const fechaStr = t.fecha_creada.substring(0, 10);
+        // Comparar en UTC para evitar problemas de zona horaria
+        const creada = new Date(t.fecha_creada);
         const hoy = new Date();
-        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
-        if (fechaStr === hoyStr) {
-          diasPasados = 0;
-          diasLabel = 'Hoy';
-        } else {
-          const creadaDate = new Date(fechaStr + 'T12:00:00');
-          const hoyDate = new Date(hoyStr + 'T12:00:00');
-          diasPasados = Math.round((hoyDate - creadaDate) / 86400000);
-          diasLabel = diasPasados === 1 ? 'Hace 1 día' : `Hace ${diasPasados} días`;
-        }
+        // Normalizar ambas a medianoche UTC
+        const creadaUTC = Date.UTC(creada.getUTCFullYear(), creada.getUTCMonth(), creada.getUTCDate());
+        const hoyUTC = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate());
+        diasPasados = Math.round((hoyUTC - creadaUTC) / 86400000);
+        if (diasPasados === 0) diasLabel = 'Hoy';
+        else if (diasPasados === 1) diasLabel = 'Hace 1 día';
+        else diasLabel = `Hace ${diasPasados} días`;
       }
       const isOld = diasPasados >= 7;
       const avance = t.avance || 0;

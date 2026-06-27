@@ -860,19 +860,30 @@ async function submitProduct() {
   if (tiendasSel.length === 0) { showToast('Selecciona al menos una tienda', true); return; }
   try {
     // Crear producto
-    const nuevos = await supaFetch('jd_productos', {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/jd_productos`, {
       method: 'POST',
-      headers: { 'Prefer': 'return=representation' },
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
       body: JSON.stringify({ nombre, emoji: selectedEmoji, categoria })
     });
+    const nuevos = await res.json();
     const prod = nuevos[0];
     // Crear relaciones con tiendas
     const rels = tiendasSel.map(tid => ({ producto_id: prod.id, tienda_id: tid }));
-    await supaFetch('jd_producto_tiendas', {
+    await fetch(`${SUPABASE_URL}/rest/v1/jd_producto_tiendas`, {
       method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(rels)
     });
-    // Invalidar cache
+    // Invalidar cache y cerrar
     tiendasSel.forEach(tid => delete productos[tid]);
     delete productos['todas'];
     renderCatalogo();

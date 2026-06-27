@@ -615,14 +615,30 @@ function renderCatalogo() {
     const div = document.createElement('div');
     div.className = 'cat-item' + (inCart ? ' gone' : '');
     div.id = 'ci-' + p.id;
-    div.onclick = () => addToCart(p.id, p.emoji, p.nombre);
-    // Long press para eliminar
+    // Long press para eliminar, tap normal para agregar al carrito
     let pressTimer;
-    div.addEventListener('touchstart', () => { pressTimer = setTimeout(() => showDeleteMenu(p.id, p.nombre, div), 600); });
-    div.addEventListener('touchend', () => clearTimeout(pressTimer));
-    div.addEventListener('touchmove', () => clearTimeout(pressTimer));
-    div.addEventListener('mousedown', () => { pressTimer = setTimeout(() => showDeleteMenu(p.id, p.nombre, div), 600); });
-    div.addEventListener('mouseup', () => clearTimeout(pressTimer));
+    let didLongPress = false;
+    div.addEventListener('touchstart', (e) => {
+      didLongPress = false;
+      pressTimer = setTimeout(() => {
+        didLongPress = true;
+        showDeleteMenu(p.id, p.nombre, div);
+      }, 600);
+    });
+    div.addEventListener('touchend', (e) => {
+      clearTimeout(pressTimer);
+      if (didLongPress) { e.preventDefault(); e.stopPropagation(); return; }
+      addToCart(p.id, p.emoji, p.nombre);
+    });
+    div.addEventListener('touchmove', () => { clearTimeout(pressTimer); didLongPress = false; });
+    div.addEventListener('mousedown', () => {
+      didLongPress = false;
+      pressTimer = setTimeout(() => { didLongPress = true; showDeleteMenu(p.id, p.nombre, div); }, 600);
+    });
+    div.addEventListener('click', (e) => {
+      if (didLongPress) { didLongPress = false; e.preventDefault(); e.stopPropagation(); return; }
+      addToCart(p.id, p.emoji, p.nombre);
+    });
     div.innerHTML = `<div class="cat-emoji">${p.emoji || '🛒'}</div><div class="cat-name">${p.nombre}</div>`;
     grid.appendChild(div);
   });

@@ -654,7 +654,7 @@ function renderCatalogo() {
       pressTimer = setTimeout(() => {
         didLongPress = true;
         showDeleteMenu(p.id, p.nombre, div);
-      }, 600);
+      }, 1100);
     });
     div.addEventListener('touchend', (e) => {
       clearTimeout(pressTimer);
@@ -664,7 +664,7 @@ function renderCatalogo() {
     div.addEventListener('touchmove', () => { clearTimeout(pressTimer); didLongPress = false; });
     div.addEventListener('mousedown', () => {
       didLongPress = false;
-      pressTimer = setTimeout(() => { didLongPress = true; showDeleteMenu(p.id, p.nombre, div); }, 600);
+      pressTimer = setTimeout(() => { didLongPress = true; showDeleteMenu(p.id, p.nombre, div); }, 1100);
     });
     div.addEventListener('click', (e) => {
       if (didLongPress) { didLongPress = false; e.preventDefault(); e.stopPropagation(); return; }
@@ -753,7 +753,7 @@ async function loadCarritoActivo() {
     const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc');
     if (!carritos || carritos.length === 0) return;
     const carritoIds = carritos.map(c => c.id);
-    const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji,tienda_id)`);
+    const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji)`);
     if (!items || items.length === 0) return;
     const carritoTienda = {};
     carritos.forEach(c => { carritoTienda[c.id] = c.tienda_id; });
@@ -1269,7 +1269,15 @@ async function loadHistorialCompras() {
     }
     // Cargar items de cada carrito
     const carritoIds = carritos.map(c => c.id);
-    const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji)`);
+    const itemsRaw = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji)`);
+    // Deduplicar por producto_id dentro de cada carrito
+    const seen = new Set();
+    const items = itemsRaw.filter(item => {
+      const key = item.carrito_id + '-' + item.producto_id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     // Alertas de productos que llevan +14 días sin comprarse
     const productosComprados = {};
     items.forEach(item => {

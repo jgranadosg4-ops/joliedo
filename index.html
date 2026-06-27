@@ -992,7 +992,12 @@ function renderTareas() {
     document.getElementById('cnt-' + cat).textContent = filtradas.length;
     list.innerHTML = '';
     filtradas.forEach(t => {
-      const diasPasados = t.fecha_creada ? Math.floor((Date.now() - new Date(t.fecha_creada)) / 86400000) : 0;
+      let diasPasados = 0;
+      if (t.fecha_creada) {
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const creada = new Date(t.fecha_creada); creada.setHours(0,0,0,0);
+        diasPasados = Math.floor((hoy - creada) / 86400000);
+      }
       const isOld = diasPasados >= 7;
       const avance = t.avance || 0;
       const isHogar = cat === 'hogar';

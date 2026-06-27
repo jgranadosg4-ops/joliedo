@@ -578,6 +578,11 @@ function renderStoreChips() {
     </div>`).join('');
 }
 
+function selectStoreChipIdx(idx) {
+  const t = window._storeChips[idx];
+  if (t) selectStoreChip(t.id, t.nombre);
+}
+
 async function selectStoreChip(id, nombre) {
   currentTiendaId = id;
   renderStoreChips();

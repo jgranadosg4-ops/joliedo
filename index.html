@@ -838,10 +838,7 @@ function openProdModal() {
   const firstEmoji = document.querySelector('.ep-item');
   if (firstEmoji) firstEmoji.classList.add('sel');
   // Categorías fijas del catálogo
-  const categoriasBase = ['Agua','Carnes','Condimentos','Congelados','Despensa','Dulcería','Enlatados','Frutas','Higiene','Hogar y cocina','Lácteos','Limpieza','Mascotas','Panadería','Ropa','Salud','Varios','Verduras'];
-  const todosProds = Object.values(productos).flat();
-  const catsUsadas = [...new Set(todosProds.map(p => p.categoria).filter(Boolean))];
-  const cats = [...new Set([...categoriasBase, ...catsUsadas])].sort();
+  const cats = ['Despensa', 'Lácteos', 'Limpieza e higiene', 'Otros', 'Proteínas'];
   const catGrid = document.getElementById('cat-select-grid');
   if (catGrid) {
     catGrid.innerHTML = cats.map(c =>

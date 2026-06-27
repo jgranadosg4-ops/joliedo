@@ -1271,24 +1271,37 @@ function addProductoAlCarrito(id, nombre, emoji) {
 
 // ---- ELIMINAR PRODUCTO ----
 function showDeleteMenu(id, nombre, el) {
-  // Quitar menú anterior si existe
   document.getElementById('delete-menu')?.remove();
+  // Overlay que bloquea clicks al fondo
+  const overlay = document.createElement('div');
+  overlay.id = 'delete-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:299;background:transparent;';
+  overlay.addEventListener('click', (e) => { e.stopPropagation(); closeDeleteMenu(); });
+  overlay.addEventListener('touchend', (e) => { e.stopPropagation(); closeDeleteMenu(); });
+  document.body.appendChild(overlay);
+
   const rect = el.getBoundingClientRect();
   const menu = document.createElement('div');
   menu.className = 'delete-menu';
   menu.id = 'delete-menu';
   menu.style.top = (rect.bottom + 4) + 'px';
-  menu.style.left = Math.min(rect.left, window.innerWidth - 160) + 'px';
-  menu.innerHTML = `
-    <div class="delete-menu-item" onclick="deleteProduct('${id}')">🗑 Eliminar "${nombre}"</div>`;
+  menu.style.left = Math.min(rect.left, window.innerWidth - 170) + 'px';
+  menu.innerHTML = `<div class="delete-menu-item">🗑 Eliminar "${nombre}"</div>`;
+  menu.querySelector('.delete-menu-item').addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteProduct(id);
+  });
+  menu.querySelector('.delete-menu-item').addEventListener('touchend', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    deleteProduct(id);
+  });
   document.body.appendChild(menu);
-  // Cerrar al tocar fuera
-  setTimeout(() => document.addEventListener('touchstart', closeDeleteMenu, { once: true }), 100);
-  setTimeout(() => document.addEventListener('click', closeDeleteMenu, { once: true }), 100);
 }
 
 function closeDeleteMenu() {
   document.getElementById('delete-menu')?.remove();
+  document.getElementById('delete-overlay')?.remove();
 }
 
 async function deleteProduct(id) {

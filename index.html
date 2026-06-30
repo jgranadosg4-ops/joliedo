@@ -571,8 +571,9 @@ function renderStoreChips() {
   const grid = document.getElementById('stores-grid');
   if (!grid) return;
   const all = [{ id: 'todas', nombre: 'Todas', emoji: '🛒' }, ...tiendas.map(t => ({ ...t, emoji: STORE_ICONS[t.nombre] || '🏪' }))];
-  grid.innerHTML = all.map(t => `
-    <div class="store-chip${currentTiendaId === t.id ? ' sel' : ''}" onclick="selectStoreChip('${t.id}','${t.nombre}')">
+  window._storeChips = all;
+  grid.innerHTML = all.map((t, idx) => `
+    <div class="store-chip${currentTiendaId === t.id ? ' sel' : ''}" onclick="selectStoreChipIdx(${idx})">
       <div class="store-chip-icon">${t.emoji}</div>
       <div class="store-chip-name">${t.nombre}</div>
     </div>`).join('');
@@ -656,12 +657,14 @@ function renderCatalogo() {
     let didLongPress = false;
     let touchStartX = 0;
     let touchStartY = 0;
+    let touchStartTime = 0;
     let didMove = false;
     div.addEventListener('touchstart', (e) => {
       didLongPress = false;
       didMove = false;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
       pressTimer = setTimeout(() => {
         if (!didMove) {
           didLongPress = true;
@@ -672,14 +675,16 @@ function renderCatalogo() {
     div.addEventListener('touchmove', (e) => {
       const dx = Math.abs(e.touches[0].clientX - touchStartX);
       const dy = Math.abs(e.touches[0].clientY - touchStartY);
-      if (dx > 8 || dy > 8) {
+      if (dx > 15 || dy > 15) {
         didMove = true;
         clearTimeout(pressTimer);
       }
     });
     div.addEventListener('touchend', (e) => {
       clearTimeout(pressTimer);
+      const duration = Date.now() - touchStartTime;
       if (didLongPress || didMove) { didLongPress = false; return; }
+      if (duration < 50 || duration > 500) return;
       addToCart(p.id, p.emoji, p.nombre);
     });
     div.addEventListener('mousedown', () => {

@@ -1149,11 +1149,24 @@ function renderTareas() {
               ${t.prioridad ? `<div class="prio-badge prio-none" onclick="setPrioridad('${t.id}',null,this)" title="Quitar prioridad">✕</div>` : ''}
             </div>
             <div style="margin-top:10px;">
-              <div class="task-detail-label" style="margin-bottom:6px;">🔔 Notifícame el</div>
-              <input type="datetime-local" class="form-input" id="notif-${t.id}"
-                value="${t.notificar_en ? t.notificar_en.slice(0,16) : ''}"
-                style="font-size:13px;padding:7px 10px;color:var(--text);background:var(--bg3);"
-                onchange="saveNotifLocal('${t.id}',this.value)"/>
+              <div class="task-detail-label" style="margin-bottom:6px;">🔔 Notifícame en</div>
+              ${t.notificar_en && new Date(t.notificar_en) > new Date()
+                ? `<div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:12px;color:var(--teal);background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.3);border-radius:16px;padding:5px 12px;">
+                      🔔 ${formatNotifTime(t.notificar_en)}
+                    </span>
+                    <div style="font-size:11px;color:var(--red);cursor:pointer;padding:4px 8px;border-radius:10px;border:1px solid rgba(226,75,74,0.3);background:rgba(226,75,74,0.08);" onclick="cancelNotif('${t.id}')">✕ Cancelar</div>
+                  </div>`
+                : `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${[
+                      {label:'1h', hours:1},
+                      {label:'2h', hours:2},
+                      {label:'4h', hours:4},
+                      {label:'8h', hours:8},
+                      {label:'Mañana', hours:24}
+                    ].map(o => `<div class="fpill" onclick="saveNotifLocal('${t.id}',${o.hours})">${o.label}</div>`).join('')}
+                  </div>`
+              }
             </div>
           </div>`;
       }
@@ -1645,14 +1658,36 @@ function escapar(str) {
 }
 
 // ---- NOTIF LOCAL (sin Supabase por ahora) ----
-function saveNotifLocal(id, value) {
+function saveNotifLocal(id, hours) {
   const tarea = tareas.find(t => t.id === id);
-  if (tarea) {
-    tarea.notificar_en = value || null;
-    updateBellBadge();
-    scheduleTaskNotifications();
-    showToast(value ? 'Recordatorio guardado 🔔' : 'Recordatorio eliminado');
-  }
+  if (!tarea) return;
+  const when = new Date(Date.now() + hours * 60 * 60 * 1000);
+  tarea.notificar_en = when.toISOString();
+  updateBellBadge();
+  scheduleTaskNotifications();
+  renderTareas();
+  showToast('🔔 Recordatorio en ' + (hours === 24 ? 'mañana' : hours + 'h'));
+}
+
+function cancelNotif(id) {
+  const tarea = tareas.find(t => t.id === id);
+  if (!tarea) return;
+  tarea.notificar_en = null;
+  updateBellBadge();
+  renderTareas();
+  showToast('Recordatorio cancelado');
+}
+
+function formatNotifTime(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+  const hhmm = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return `Hoy ${hhmm}`;
+  if (isTomorrow) return `Mañana ${hhmm}`;
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) + ' ' + hhmm;
 }
 
 // ---- POMODORO ----

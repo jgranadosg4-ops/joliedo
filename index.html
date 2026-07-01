@@ -370,12 +370,19 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     <div class="fpill" onclick="setFilter('trabajo',this)">💼 Trabajo</div>
     <div class="fpill" onclick="setFilter('hogar',this)">🏠 Hogar</div>
     <div class="fpill" onclick="setFilter('ideas',this)">👤 Personal</div>
+    <div class="fpill" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊</div>
   </div>
 
-  <div class="warn-row hidden" id="warn-old">
-    <span style="font-size:16px;">⏰</span>
-    <div class="warn-txt" id="warn-old-txt">Tienes pendientes con más de 7 días sin hacer</div>
+  <!-- DASHBOARD (oculto por defecto) -->
+  <div id="dashboard-wrapper" style="display:none;">
+    <div id="dashboard-container"></div>
   </div>
+
+  <div id="tareas-wrapper">
+    <div class="warn-row hidden" id="warn-old">
+      <span style="font-size:16px;">⏰</span>
+      <div class="warn-txt" id="warn-old-txt">Tienes pendientes con más de 7 días sin hacer</div>
+    </div>
 
   <!-- TRABAJO -->
   <div class="section" id="sec-trabajo">
@@ -437,24 +444,20 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     </div>
   </div>
 
+  </div><!-- end tareas-wrapper -->
+
 </div>
 
 <!-- ==================== HISTORIAL ==================== -->
 <div class="screen" id="screen-historial">
 
   <div class="subtabs">
-    <div class="stab on" onclick="showSub('dashboard')">📊 Dashboard</div>
-    <div class="stab" onclick="showSub('compras-hist')">🛒 Compras</div>
+    <div class="stab on" onclick="showSub('compras-hist')">🛒 Compras</div>
     <div class="stab" onclick="showSub('actividades-hist')">✅ Actividades</div>
   </div>
 
-  <!-- DASHBOARD -->
-  <div class="subscreen show" id="sub-dashboard">
-    <div id="dashboard-container"></div>
-  </div>
-
   <!-- HISTORIAL COMPRAS -->
-  <div class="subscreen" id="sub-compras-hist">
+  <div class="subscreen show" id="sub-compras-hist">
     <div id="rec-alerts-container"></div>
     <div id="hist-compras-container"><div class="loading">Cargando historial...</div></div>
   </div>
@@ -1171,6 +1174,24 @@ function renderTareas() {
                   </div>`
               }
             </div>
+            <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div class="task-detail-label" style="margin:0;">🔄 Seguimiento recurrente</div>
+                <div onclick="toggleRecurrenciaTask('${t.id}',this)"
+                  style="width:36px;height:20px;border-radius:10px;background:${t.repetir_dias ? 'var(--purple)' : 'var(--bg3)'};border:1px solid var(--border);cursor:pointer;position:relative;transition:background 0.2s;">
+                  <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${t.repetir_dias ? 'right:2px' : 'left:2px'};transition:all 0.2s;"></div>
+                </div>
+              </div>
+              ${t.repetir_dias ? `
+              <div style="margin-top:8px;">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Repetir cada</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${[{label:'1d',days:1},{label:'2d',days:2},{label:'3d',days:3},{label:'7d',days:7}]
+                    .map(o => `<div class="fpill${t.repetir_dias===o.days?' on':''}" onclick="setRepetirDias('${t.id}',${o.days})">${o.label}</div>`).join('')}
+                </div>
+                ${t.veces_completada ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Completada ${t.veces_completada} vez${t.veces_completada>1?'es':''}</div>` : ''}
+              </div>` : ''}
+            </div>
           </div>`;
       } else {
         // Trabajo e Ideas: con prioridad, progreso y detalle expandible
@@ -1184,6 +1205,7 @@ function renderTareas() {
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
                 ${getPrioLabel(t.prioridad)}
                 <div class="task-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</div>
+                ${t.repetir_dias ? `<span style="font-size:13px;" title="Seguimiento recurrente">🔄</span>` : ''}
                 <span class="progress-badge ${badgeClass}" style="flex-shrink:0;">${avance}%</span>
               </div>
               ${avance > 0 ? `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${avance}%;background:${getProgressColor(avance)};"></div></div>` : ''}
@@ -1278,6 +1300,10 @@ function setFilter(cat, el) {
   currentFilter = cat;
   document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
   if (el) el.classList.add('on');
+  const isDash = cat === 'dashboard';
+  document.getElementById('dashboard-wrapper').style.display = isDash ? 'block' : 'none';
+  document.getElementById('tareas-wrapper').style.display = isDash ? 'none' : 'block';
+  if (isDash) { renderDashboard(); return; }
   applyFilter();
   renderRecurrentes();
   renderCompletadas();
@@ -1301,21 +1327,43 @@ async function completeTask(id, nombre, cat, checkEl) {
   checkEl.style.borderColor = 'var(--purple)';
   checkEl.textContent = '✓';
   checkEl.style.color = '#fff';
+  const tarea = tareas.find(t => t.id === id);
+  const esRecurrente = tarea && tarea.repetir_dias;
   setTimeout(async () => {
     const row = document.getElementById('task-' + id);
     if (row) { row.style.opacity = '0'; row.style.transform = 'translateX(30px)'; }
     setTimeout(async () => {
-      if (row) row.remove();
-      tareas = tareas.filter(t => t.id !== id);
-      updateCounts();
-      checkOldTareas();
-      addToCompleted(nombre, cat);
-      try {
-        await supaFetch(`jd_tareas?id=eq.${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'completado', fecha_completada: new Date().toISOString() })
-        });
-      } catch(e) {}
+      if (esRecurrente) {
+        // Resetear: volver a pendiente con nueva fecha
+        const nuevaFecha = new Date(Date.now() + tarea.repetir_dias * 24 * 60 * 60 * 1000).toISOString();
+        const vecesCompletada = (tarea.veces_completada || 0) + 1;
+        if (tarea) {
+          tarea.avance = 0;
+          tarea.fecha_creada = nuevaFecha;
+          tarea.veces_completada = vecesCompletada;
+        }
+        addToCompleted(nombre, cat);
+        try {
+          await supaFetch(`jd_tareas?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ avance: 0, fecha_creada: nuevaFecha, veces_completada: vecesCompletada })
+          });
+        } catch(e) {}
+        renderTareas();
+        showToast(`🔄 Reaparece en ${tarea.repetir_dias}d`);
+      } else {
+        if (row) row.remove();
+        tareas = tareas.filter(t => t.id !== id);
+        updateCounts();
+        checkOldTareas();
+        addToCompleted(nombre, cat);
+        try {
+          await supaFetch(`jd_tareas?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'completado', fecha_completada: new Date().toISOString() })
+          });
+        } catch(e) {}
+      }
     }, 300);
   }, 400);
 }
@@ -1425,16 +1473,14 @@ function showSub(sub) {
   document.querySelectorAll('.subscreen').forEach(s => s.classList.remove('show'));
   document.querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
   document.getElementById('sub-' + sub).classList.add('show');
-  const tabIdx = { 'dashboard': 0, 'compras-hist': 1, 'actividades-hist': 2 };
+  const tabIdx = { 'compras-hist': 0, 'actividades-hist': 1 };
   const tabs = document.querySelectorAll('.stab');
-  if (tabs[tabIdx[sub]]) tabs[tabIdx[sub]].classList.add('on');
-  if (sub === 'dashboard') renderDashboard();
+  if (tabs[tabIdx[sub]] !== undefined) tabs[tabIdx[sub]].classList.add('on');
 }
 
 async function loadHistorial() {
   loadHistorialCompras();
   loadHistorialActividades();
-  renderDashboard();
 }
 
 async function loadHistorialCompras() {
@@ -1538,6 +1584,8 @@ function renderDashboard() {
     .sort((a,b) => (a.prioridad||9) - (b.prioridad||9)).slice(0, 5);
   const recordatorios = tareas.filter(t => t.notificar_en && new Date(t.notificar_en) > now && t.status === 'pendiente')
     .sort((a,b) => new Date(a.notificar_en) - new Date(b.notificar_en)).slice(0, 3);
+  const enSeguimiento = tareas.filter(t => t.repetir_dias)
+    .sort((a,b) => new Date(a.fecha_creada) - new Date(b.fecha_creada));
 
   const catColor = { trabajo: '#7F77DD', hogar: '#1D9E75', ideas: '#D4537E' };
 
@@ -1590,7 +1638,7 @@ function renderDashboard() {
 
       ${recordatorios.length ? `
       <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Recordatorios próximos</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
         ${recordatorios.map(t => `
           <div style="background:var(--bg2);border:0.5px solid var(--border-accent, #7F77DD);border-radius:12px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
             <span style="font-size:16px;flex-shrink:0;margin-top:1px;">🔔</span>
@@ -1600,14 +1648,28 @@ function renderDashboard() {
             </div>
           </div>`).join('')}
       </div>` : ''}
+
+      ${enSeguimiento.length ? `
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">🔄 En seguimiento</div>
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
+        ${enSeguimiento.map((t,i) => {
+          const proxima = t.fecha_creada ? new Date(t.fecha_creada) : null;
+          const diasRestantes = proxima ? Math.max(0, Math.ceil((proxima - now) / 86400000)) : null;
+          const proxLabel = diasRestantes === 0 ? 'Hoy' : diasRestantes === 1 ? 'Mañana' : diasRestantes !== null ? `En ${diasRestantes}d` : '—';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i < enSeguimiento.length-1 ? 'border-bottom:0.5px solid var(--border);' : ''}">
+            <span style="font-size:14px;">🔄</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</div>
+              <div style="font-size:11px;color:var(--text2);">Próxima: ${proxLabel} · Hecho ${t.veces_completada||0}x · cada ${t.repetir_dias}d</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
     </div>`;
 }
 
 function goToCat(cat) {
-  const tabEl = document.querySelector('.tab');
-  const allTabs = document.querySelectorAll('.tab');
-  // Find Pendientes tab (first tab)
-  allTabs[0].click();
+  setTab('pendientes', document.querySelectorAll('.tab')[0]);
   setTimeout(() => {
     const pills = document.querySelectorAll('.fpill');
     pills.forEach(p => {
@@ -1857,7 +1919,38 @@ function formatNotifTime(iso) {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) + ' ' + hhmm;
 }
 
-// ---- MIC / SPEECH ----
+// ---- SEGUIMIENTO RECURRENTE ----
+async function toggleRecurrenciaTask(id, toggleEl) {
+  const tarea = tareas.find(t => t.id === id);
+  if (!tarea) return;
+  const nuevoValor = tarea.repetir_dias ? null : 2; // default 2 días
+  tarea.repetir_dias = nuevoValor;
+  try {
+    await supaFetch(`jd_tareas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ repetir_dias: nuevoValor }) });
+  } catch(e) {}
+  renderTareas();
+  setTimeout(() => {
+    const detail = document.getElementById('detail-' + id);
+    if (detail) detail.classList.add('show');
+  }, 50);
+}
+
+async function setRepetirDias(id, dias) {
+  const tarea = tareas.find(t => t.id === id);
+  if (!tarea) return;
+  tarea.repetir_dias = dias;
+  try {
+    await supaFetch(`jd_tareas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ repetir_dias: dias }) });
+  } catch(e) {}
+  renderTareas();
+  setTimeout(() => {
+    const detail = document.getElementById('detail-' + id);
+    if (detail) detail.classList.add('show');
+  }, 50);
+  showToast(`🔄 Repetirá cada ${dias}d`);
+}
+
+
 let _micRecognition = null;
 let _micActiveId = null;
 

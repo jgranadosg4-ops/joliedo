@@ -369,7 +369,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     <div class="fpill on" onclick="setFilter('todos',this)">Todos</div>
     <div class="fpill" onclick="setFilter('trabajo',this)">💼 Trabajo</div>
     <div class="fpill" onclick="setFilter('hogar',this)">🏠 Hogar</div>
-    <div class="fpill" onclick="setFilter('ideas',this)">💡 Ideas</div>
+    <div class="fpill" onclick="setFilter('ideas',this)">👤 Personal</div>
   </div>
 
   <div class="warn-row hidden" id="warn-old">
@@ -404,12 +404,12 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
   <!-- IDEAS -->
   <div class="section" id="sec-ideas">
     <div class="sec-header" onclick="toggleSec('ideas')">
-      <div class="sec-title">💡 Ideas <span class="sec-badge badge-pink" id="cnt-ideas">0</span></div>
+      <div class="sec-title">👤 Personal <span class="sec-badge badge-pink" id="cnt-ideas">0</span></div>
       <span class="chevron open" id="chev-ideas">▾</span>
     </div>
     <div class="sec-body" id="body-ideas">
       <div class="task-list" id="list-ideas"></div>
-      <div class="add-task-btn" onclick="openNewTask('ideas')">+ Agregar idea</div>
+      <div class="add-task-btn" onclick="openNewTask('ideas')">+ Agregar personal</div>
     </div>
   </div>
 
@@ -443,12 +443,18 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 <div class="screen" id="screen-historial">
 
   <div class="subtabs">
-    <div class="stab on" onclick="showSub('compras-hist')">🛒 Compras</div>
+    <div class="stab on" onclick="showSub('dashboard')">📊 Dashboard</div>
+    <div class="stab" onclick="showSub('compras-hist')">🛒 Compras</div>
     <div class="stab" onclick="showSub('actividades-hist')">✅ Actividades</div>
   </div>
 
+  <!-- DASHBOARD -->
+  <div class="subscreen show" id="sub-dashboard">
+    <div id="dashboard-container"></div>
+  </div>
+
   <!-- HISTORIAL COMPRAS -->
-  <div class="subscreen show" id="sub-compras-hist">
+  <div class="subscreen" id="sub-compras-hist">
     <div id="rec-alerts-container"></div>
     <div id="hist-compras-container"><div class="loading">Cargando historial...</div></div>
   </div>
@@ -470,7 +476,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
       <div class="cat-btns">
         <div class="cat-btn active" onclick="setTaskCat('trabajo',this)">💼 Trabajo</div>
         <div class="cat-btn" onclick="setTaskCat('hogar',this)">🏠 Hogar</div>
-        <div class="cat-btn" onclick="setTaskCat('ideas',this)">💡 Ideas</div>
+        <div class="cat-btn" onclick="setTaskCat('ideas',this)">👤 Personal</div>
       </div>
     </div>
     <div class="form-group">
@@ -1132,12 +1138,39 @@ function renderTareas() {
       div.id = 'task-' + t.id;
 
       if (isHogar) {
-        // Hogar: simple, tap directo para completar
+        // Hogar: con detalle expandible y notificaciones
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'stretch';
         div.innerHTML = `
-          <div class="tcheck" onclick="completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)"></div>
-          <div style="flex:1">
-            <div class="task-text">${t.nombre}</div>
-            ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">${diasLabel}</div>`}
+          <div style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;" onclick="toggleTaskDetail('${t.id}')">
+            <div class="tcheck" onclick="event.stopPropagation();completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)" style="margin-top:2px;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div class="task-text">${t.nombre}</div>
+              ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">${diasLabel}</div>`}
+            </div>
+            <span style="font-size:12px;color:var(--text2);margin-top:2px;">▾</span>
+          </div>
+          <div class="task-detail" id="detail-${t.id}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+              <div class="task-detail-label" style="margin:0;">Consideraciones</div>
+              <div id="mic-btn-${t.id}" onclick="toggleMic('${t.id}')" style="font-size:18px;cursor:pointer;padding:2px 6px;border-radius:8px;transition:background 0.2s;" title="Dictar nota">🎙️</div>
+            </div>
+            <textarea class="consideraciones-input" id="cons-${t.id}" placeholder="Notas, detalles, contexto..." onblur="saveConsideraciones('${t.id}',this.value)">${t.consideraciones || ''}</textarea>
+            <div style="margin-top:10px;">
+              <div class="task-detail-label" style="margin-bottom:6px;">🔔 Notifícame en</div>
+              ${t.notificar_en && new Date(t.notificar_en) > new Date()
+                ? `<div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:12px;color:var(--teal);background:rgba(29,158,117,0.12);border:1px solid rgba(29,158,117,0.3);border-radius:16px;padding:5px 12px;">
+                      🔔 ${formatNotifTime(t.notificar_en)}
+                    </span>
+                    <div style="font-size:11px;color:var(--red);cursor:pointer;padding:4px 8px;border-radius:10px;border:1px solid rgba(226,75,74,0.3);background:rgba(226,75,74,0.08);" onclick="cancelNotif('${t.id}')">✕ Cancelar</div>
+                  </div>`
+                : `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${[{label:'1h',hours:1},{label:'2h',hours:2},{label:'4h',hours:4},{label:'8h',hours:8},{label:'Mañana',hours:24}]
+                      .map(o => `<div class="fpill" onclick="saveNotifLocal('${t.id}',${o.hours})">${o.label}</div>`).join('')}
+                  </div>`
+              }
+            </div>
           </div>`;
       } else {
         // Trabajo e Ideas: con prioridad, progreso y detalle expandible
@@ -1205,7 +1238,7 @@ function renderRecurrentes() {
   list.innerHTML = '';
   const cats = ['trabajo', 'hogar', 'ideas'];
   const labels = { trabajo: 'badge-orange', hogar: 'badge-green', ideas: 'badge-pink' };
-  const nombres = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '💡 Ideas' };
+  const nombres = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '👤 Personal' };
   // Filtrar recurrentes por categoría activa
   const filtrados = currentFilter === 'todos'
     ? recurrentes
@@ -1288,7 +1321,7 @@ async function completeTask(id, nombre, cat, checkEl) {
 }
 
 function addToCompleted(nombre, cat) {
-  const labels = { trabajo: '💼', hogar: '🏠', ideas: '💡' };
+  const labels = { trabajo: '💼', hogar: '🏠', ideas: '👤' };
   const now = new Date();
   const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   completadas.push({ nombre, cat, timeStr });
@@ -1298,7 +1331,7 @@ function addToCompleted(nombre, cat) {
 function renderCompletadas() {
   const list = document.getElementById('list-completadas');
   const filtradas = currentFilter === 'todos' ? completadas : completadas.filter(c => c.categoria === currentFilter || c.cat === currentFilter);
-  const labels = { trabajo: '💼', hogar: '🏠', ideas: '💡' };
+  const labels = { trabajo: '💼', hogar: '🏠', ideas: '👤' };
   list.innerHTML = filtradas.map(c =>
     `<div class="done-task"><div class="done-check">✓</div><div class="done-name">${labels[c.cat]||''} ${c.nombre}</div><div class="done-date">${c.timeStr}</div></div>`
   ).join('');
@@ -1351,7 +1384,7 @@ function openNewTask(cat) {
   currentTaskCat = cat;
   document.getElementById('task-nombre').value = '';
   if (document.getElementById('task-consideraciones')) document.getElementById('task-consideraciones').value = '';
-  document.getElementById('task-modal-title').textContent = cat === 'ideas' ? 'Nueva idea' : 'Nueva tarea';
+  document.getElementById('task-modal-title').textContent = cat === 'ideas' ? 'Nueva personal' : 'Nueva tarea';
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   const idx = ['trabajo','hogar','ideas'].indexOf(cat);
   document.querySelectorAll('.cat-btn')[idx]?.classList.add('active');
@@ -1365,7 +1398,7 @@ function setTaskCat(cat, el) {
   currentTaskCat = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
-  // Mostrar consideraciones solo en Trabajo e Ideas
+  // Mostrar consideraciones solo en Trabajo e Personal
   const consGroup = document.getElementById('task-consideraciones-group');
   if (consGroup) consGroup.style.display = (cat !== 'hogar') ? '' : 'none';
 }
@@ -1389,15 +1422,19 @@ async function submitTask() {
 // ---- HISTORIAL ----
 function showSub(sub) {
   currentSubHist = sub;
-  document.querySelectorAll('.subscreen').forEach((s,i) => s.classList.remove('show'));
+  document.querySelectorAll('.subscreen').forEach(s => s.classList.remove('show'));
   document.querySelectorAll('.stab').forEach(t => t.classList.remove('on'));
   document.getElementById('sub-' + sub).classList.add('show');
-  document.querySelectorAll('.stab')[sub === 'compras-hist' ? 0 : 1].classList.add('on');
+  const tabIdx = { 'dashboard': 0, 'compras-hist': 1, 'actividades-hist': 2 };
+  const tabs = document.querySelectorAll('.stab');
+  if (tabs[tabIdx[sub]]) tabs[tabIdx[sub]].classList.add('on');
+  if (sub === 'dashboard') renderDashboard();
 }
 
 async function loadHistorial() {
   loadHistorialCompras();
   loadHistorialActividades();
+  renderDashboard();
 }
 
 async function loadHistorialCompras() {
@@ -1476,6 +1513,109 @@ async function loadHistorialCompras() {
   } catch(e) { container.innerHTML = '<div class="empty-state">Error cargando historial</div>'; }
 }
 
+function renderDashboard() {
+  const container = document.getElementById('dashboard-container');
+  if (!container) return;
+  const now = new Date();
+  const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const pendientes = tareas.filter(t => t.status === 'pendiente');
+  const completadasSemana = tareas.filter(t => t.status === 'completada' && t.fecha_completada && new Date(t.fecha_completada) >= weekAgo);
+  const conPrioridad = pendientes.filter(t => t.prioridad);
+  const atrasadas = pendientes.filter(t => t.fecha_creada && new Date(t.fecha_creada) <= weekAgo);
+  const cats = [
+    { key: 'trabajo', label: '💼 Trabajo', color: '#7F77DD' },
+    { key: 'hogar', label: '🏠 Hogar', color: '#1D9E75' },
+    { key: 'ideas', label: '👤 Personal', color: '#D4537E' }
+  ];
+  const catData = cats.map(cat => {
+    const cp = pendientes.filter(t => t.categoria === cat.key);
+    const avances = cp.map(t => t.avance || 0);
+    const avg = avances.length ? Math.round(avances.reduce((a,b) => a+b, 0) / avances.length) : 0;
+    const prios = cp.filter(t => t.prioridad).length;
+    return { ...cat, count: cp.length, avg, prios };
+  });
+  const prioritarias = pendientes.filter(t => t.prioridad === 1 || t.prioridad === 2)
+    .sort((a,b) => (a.prioridad||9) - (b.prioridad||9)).slice(0, 5);
+  const recordatorios = tareas.filter(t => t.notificar_en && new Date(t.notificar_en) > now && t.status === 'pendiente')
+    .sort((a,b) => new Date(a.notificar_en) - new Date(b.notificar_en)).slice(0, 3);
+
+  const catColor = { trabajo: '#7F77DD', hogar: '#1D9E75', ideas: '#D4537E' };
+
+  container.innerHTML = `
+    <div style="padding:12px;">
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Resumen general</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:16px;">
+        ${[
+          { num: pendientes.length, lbl: 'Pendientes', color: '#7F77DD' },
+          { num: completadasSemana.length, lbl: 'Completadas esta semana', color: '#1D9E75' },
+          { num: conPrioridad.length, lbl: 'Con prioridad activa', color: '#E24B4A' },
+          { num: atrasadas.length, lbl: 'Sin hacer +7 días', color: '#BA7517' }
+        ].map(m => `
+          <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;">
+            <div style="height:3px;border-radius:2px;background:${m.color};margin-bottom:10px;"></div>
+            <div style="font-size:26px;font-weight:500;color:var(--text);line-height:1;margin-bottom:2px;">${m.num}</div>
+            <div style="font-size:12px;color:var(--text2);">${m.lbl}</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Por categoría</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        ${catData.map(cat => `
+          <div onclick="goToCat('${cat.key}')" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="font-size:13px;font-weight:500;color:var(--text);">${cat.label}</div>
+              <span style="font-size:11px;color:var(--text2);background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;padding:2px 7px;">${cat.count} pendiente${cat.count !== 1 ? 's' : ''}</span>
+            </div>
+            <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px;">
+              <div style="height:100%;width:${cat.avg}%;background:${cat.color};border-radius:3px;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text2);display:flex;justify-content:space-between;">
+              <span>Avance promedio: ${cat.avg}%</span>
+              <span>${cat.prios > 0 ? `${cat.prios} prioridad${cat.prios > 1 ? 'es' : ''} 🔥` : 'Sin prioridades'}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      ${prioritarias.length ? `
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Prioritarias ahora</div>
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
+        ${prioritarias.map((t,i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i < prioritarias.length-1 ? 'border-bottom:0.5px solid var(--border);' : ''}">
+            <div style="width:7px;height:7px;border-radius:50%;background:${catColor[t.categoria]||'#888'};flex-shrink:0;"></div>
+            <span style="font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
+            <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:${t.prioridad===1?'#FCEBEB':'#FAEEDA'};color:${t.prioridad===1?'#A32D2D':'#854F0B'};flex-shrink:0;">P${t.prioridad}</span>
+            <span style="font-size:11px;color:var(--text2);flex-shrink:0;">${t.avance||0}%</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+      ${recordatorios.length ? `
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Recordatorios próximos</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${recordatorios.map(t => `
+          <div style="background:var(--bg2);border:0.5px solid var(--border-accent, #7F77DD);border-radius:12px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:16px;flex-shrink:0;margin-top:1px;">🔔</span>
+            <div>
+              <div style="font-size:11px;color:var(--purple);font-weight:500;">${formatNotifTime(t.notificar_en)}</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.4;">${t.nombre}</div>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
+
+function goToCat(cat) {
+  const tabEl = document.querySelector('.tab');
+  const allTabs = document.querySelectorAll('.tab');
+  // Find Pendientes tab (first tab)
+  allTabs[0].click();
+  setTimeout(() => {
+    const pills = document.querySelectorAll('.fpill');
+    pills.forEach(p => {
+      if (p.getAttribute('onclick') && p.getAttribute('onclick').includes(`'${cat}'`)) p.click();
+    });
+  }, 80);
+}
+
 async function loadHistorialActividades() {
   const container = document.getElementById('hist-actividades-container');
   try {
@@ -1487,7 +1627,7 @@ async function loadHistorialActividades() {
     const cats = [
       { key: 'trabajo', label: '💼 Trabajo', badge: 'badge-orange' },
       { key: 'hogar', label: '🏠 Hogar', badge: 'badge-green' },
-      { key: 'ideas', label: '💡 Ideas', badge: 'badge-pink' }
+      { key: 'ideas', label: '👤 Personal', badge: 'badge-pink' }
     ];
     container.innerHTML = cats.map(({ key, label, badge }) => {
       const grupo = data.filter(t => t.categoria === key);

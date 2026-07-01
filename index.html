@@ -1670,10 +1670,10 @@ function renderDashboard() {
           </div>`).join('')}
       </div>` : ''}
 
-      ${enSeguimiento.length ? `
       <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">🔄 En seguimiento</div>
       <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
-        ${enSeguimiento.map((t,i) => {
+        ${enSeguimiento.length === 0 ? `<div style="padding:10px 0;font-size:13px;color:var(--text2);">Sin tareas en seguimiento</div>` :
+        enSeguimiento.map((t,i) => {
           const proxima = t.fecha_creada ? new Date(t.fecha_creada) : null;
           const diasRestantes = proxima ? Math.max(0, Math.ceil((proxima - now) / 86400000)) : null;
           const proxLabel = diasRestantes === 0 ? 'Hoy' : diasRestantes === 1 ? 'Mañana' : diasRestantes !== null ? `En ${diasRestantes}d` : '—';
@@ -1685,7 +1685,7 @@ function renderDashboard() {
             </div>
           </div>`;
         }).join('')}
-      </div>` : ''}
+      </div>
     </div>`;
 }
 

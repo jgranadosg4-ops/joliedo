@@ -1250,6 +1250,24 @@ function renderTareas() {
                   </div>`
               }
             </div>
+            <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div class="task-detail-label" style="margin:0;">🔄 Seguimiento recurrente</div>
+                <div onclick="toggleRecurrenciaTask('${t.id}',this)"
+                  style="width:36px;height:20px;border-radius:10px;background:${t.repetir_dias ? 'var(--purple)' : 'var(--bg3)'};border:1px solid var(--border);cursor:pointer;position:relative;transition:background 0.2s;">
+                  <div style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;${t.repetir_dias ? 'right:2px' : 'left:2px'};transition:all 0.2s;"></div>
+                </div>
+              </div>
+              ${t.repetir_dias ? `
+              <div style="margin-top:8px;">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Repetir cada</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${[{label:'1d',days:1},{label:'2d',days:2},{label:'3d',days:3},{label:'7d',days:7}]
+                    .map(o => `<div class="fpill${t.repetir_dias===o.days?' on':''}" onclick="setRepetirDias('${t.id}',${o.days})">${o.label}</div>`).join('')}
+                </div>
+                ${t.veces_completada ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Completada ${t.veces_completada} vez${t.veces_completada>1?'es':''}</div>` : ''}
+              </div>` : ''}
+            </div>
           </div>`;
       }
       list.appendChild(div);

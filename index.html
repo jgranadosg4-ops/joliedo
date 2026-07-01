@@ -794,8 +794,7 @@ function filterCatalogo(query) {
   renderCatalogo(filtrados);
 }
 
-
-  if (cart[id] !== undefined) return;
+async function addToCart(id, emoji, nombre) {
   let tiendaDelProducto = currentTiendaId !== 'todas' ? currentTiendaId : null;
   if (!tiendaDelProducto) {
     // Desde "Todas" - pedir al usuario en qué tienda lo compra

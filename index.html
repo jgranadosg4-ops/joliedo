@@ -370,7 +370,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
     <div class="fpill" onclick="setFilter('trabajo',this)">💼 Trabajo</div>
     <div class="fpill" onclick="setFilter('hogar',this)">🏠 Hogar</div>
     <div class="fpill" onclick="setFilter('ideas',this)">👤 Personal</div>
-    <div class="fpill" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊</div>
+    <div class="fpill" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊 Dashboard</div>
   </div>
 
   <!-- DASHBOARD (oculto por defecto) -->
@@ -1148,7 +1148,10 @@ function renderTareas() {
           <div style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;" onclick="toggleTaskDetail('${t.id}')">
             <div class="tcheck" onclick="event.stopPropagation();completeTask('${t.id}','${escapar(t.nombre)}','${t.categoria}',this)" style="margin-top:2px;flex-shrink:0;"></div>
             <div style="flex:1;min-width:0;">
-              <div class="task-text">${t.nombre}</div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div class="task-text" style="flex:1;">${t.nombre}</div>
+                ${t.repetir_dias ? `<span style="font-size:13px;" title="Seguimiento recurrente">🔄</span>` : ''}
+              </div>
               ${isOld ? `<div class="task-age">⚠️ ${diasPasados} días sin hacer</div>` : `<div class="task-sub">${diasLabel}</div>`}
             </div>
             <span style="font-size:12px;color:var(--text2);margin-top:2px;">▾</span>

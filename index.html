@@ -309,13 +309,13 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 
 <!-- TABS -->
 <div class="tabs">
-  <div class="tab active" onclick="setTab('compras',this)">🛒 Compras</div>
-  <div class="tab" onclick="setTab('pendientes',this)">✅ Pendientes</div>
+  <div class="tab active" onclick="setTab('pendientes',this)">✅ Pendientes</div>
+  <div class="tab" onclick="setTab('compras',this)">🛒 Compras</div>
   <div class="tab" onclick="setTab('historial',this)">📋 Historial</div>
 </div>
 
 <!-- ==================== COMPRAS ==================== -->
-<div class="screen show" id="screen-compras">
+<div class="screen" id="screen-compras">
 
   <!-- TIENDA -->
   <div class="section">
@@ -360,7 +360,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 </div>
 
 <!-- ==================== PENDIENTES ==================== -->
-<div class="screen" id="screen-pendientes">
+<div class="screen show" id="screen-pendientes">
 
   <div class="filter-row">
     <div class="fpill on" onclick="setFilter('todos',this)">Todos</div>
@@ -1148,6 +1148,13 @@ function renderTareas() {
               ${[1,2,3].map(p => `<div class="prio-badge prio-${p}" style="${t.prioridad===p?'box-shadow:0 0 0 2px white;':''}" onclick="setPrioridad('${t.id}',${p},this)">${p}</div>`).join('')}
               ${t.prioridad ? `<div class="prio-badge prio-none" onclick="setPrioridad('${t.id}',null,this)" title="Quitar prioridad">✕</div>` : ''}
             </div>
+            <div style="margin-top:10px;">
+              <div class="task-detail-label" style="margin-bottom:6px;">🔔 Notifícame el</div>
+              <input type="datetime-local" class="form-input" id="notif-${t.id}"
+                value="${t.notificar_en ? t.notificar_en.slice(0,16) : ''}"
+                style="font-size:13px;padding:7px 10px;color:var(--text);background:var(--bg3);"
+                onchange="saveNotifLocal('${t.id}',this.value)"/>
+            </div>
           </div>`;
       }
       list.appendChild(div);
@@ -1635,6 +1642,17 @@ function showToast(msg, isError) {
 
 function escapar(str) {
   return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ---- NOTIF LOCAL (sin Supabase por ahora) ----
+function saveNotifLocal(id, value) {
+  const tarea = tareas.find(t => t.id === id);
+  if (tarea) {
+    tarea.notificar_en = value || null;
+    updateBellBadge();
+    scheduleTaskNotifications();
+    showToast(value ? 'Recordatorio guardado 🔔' : 'Recordatorio eliminado');
+  }
 }
 
 // ---- POMODORO ----

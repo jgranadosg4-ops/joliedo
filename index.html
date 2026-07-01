@@ -1895,6 +1895,10 @@ function saveNotifLocal(id, hours) {
   if (!tarea) return;
   const when = new Date(Date.now() + hours * 60 * 60 * 1000);
   tarea.notificar_en = when.toISOString();
+  supaFetch(`jd_tareas?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ notificar_en: tarea.notificar_en })
+  }).catch(e => console.warn('notificar_en patch:', e));
   updateBellBadge();
   scheduleTaskNotifications();
   renderTareas();
@@ -1905,6 +1909,10 @@ function cancelNotif(id) {
   const tarea = tareas.find(t => t.id === id);
   if (!tarea) return;
   tarea.notificar_en = null;
+  supaFetch(`jd_tareas?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ notificar_en: null })
+  }).catch(e => console.warn('cancelNotif patch:', e));
   updateBellBadge();
   renderTareas();
   showToast('Recordatorio cancelado');

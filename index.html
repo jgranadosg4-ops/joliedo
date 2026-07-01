@@ -217,6 +217,42 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); font-size: 14px; }
 .loading { text-align: center; padding: 30px; color: var(--text2); font-size: 13px; }
 .hidden { display: none !important; }
+
+/* POMODORO */
+.pomo-pill { display: flex; align-items: center; gap: 6px; background: rgba(127,119,221,0.1); border: 1.5px solid rgba(127,119,221,0.25); border-radius: 20px; padding: 5px 10px; cursor: pointer; user-select: none; -webkit-user-select: none; transition: background 0.2s; }
+.pomo-pill.rest { background: rgba(29,158,117,0.1); border-color: rgba(29,158,117,0.3); }
+.pomo-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--purple); flex-shrink: 0; }
+.pomo-pill.rest .pomo-pill-dot { background: var(--teal); }
+.pomo-pill-dot.blink { animation: pomoblink 1s infinite; }
+@keyframes pomoblink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.pomo-pill-time { font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.5px; }
+.pomo-pill-phase { font-size: 10px; color: var(--text2); }
+
+.pomo-panel { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 16px; display: none; }
+.pomo-panel.show { display: block; }
+.pomo-panel-inner { display: flex; align-items: center; gap: 14px; }
+.pomo-ring-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+.pomo-ring-wrap svg { transform: rotate(-90deg); display: block; }
+.pomo-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.pomo-ring-min { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
+.pomo-ring-lbl { font-size: 9px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+.pomo-info { flex: 1; min-width: 0; }
+.pomo-phase-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.pomo-phase-sub { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+.pomo-btns { display: flex; gap: 7px; }
+.pomo-btn { padding: 6px 14px; border-radius: 16px; font-size: 12px; font-weight: 500; border: none; cursor: pointer; }
+.pomo-btn-main { background: var(--purple); color: #fff; }
+.pomo-btn-main.rest { background: var(--teal); }
+.pomo-btn-skip { background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border); }
+.pomo-dots { display: flex; gap: 5px; margin-top: 10px; }
+.pomo-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(127,119,221,0.2); }
+.pomo-dot.done { background: var(--purple); }
+.pomo-dot.done.rest-done { background: var(--teal); }
+
+/* BELL BADGE */
+.bell-wrap { position: relative; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.bell-badge { position: absolute; top: -4px; right: -6px; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; min-width: 15px; height: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; border: 1.5px solid var(--bg2); line-height: 1; }
+.bell-badge.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -232,7 +268,43 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
       <div class="nav-sub" id="nav-sub">Listas y pendientes</div>
     </div>
   </div>
-  <div style="font-size:22px;cursor:pointer;" id="notif-icon" title="Alertas">🔔</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="pomo-pill" id="pomo-pill" onclick="togglePomoPanel()">
+      <div class="pomo-pill-dot" id="pomo-pill-dot"></div>
+      <span class="pomo-pill-time" id="pomo-pill-time">25:00</span>
+      <span class="pomo-pill-phase" id="pomo-pill-phase">trabajo</span>
+    </div>
+    <div class="bell-wrap" id="notif-icon" onclick="requestNotifPermission()">
+      🔔
+      <div class="bell-badge hidden" id="bell-badge">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL POMODORO -->
+<div class="pomo-panel" id="pomo-panel">
+  <div class="pomo-panel-inner">
+    <div class="pomo-ring-wrap">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(127,119,221,0.15)" stroke-width="5"/>
+        <circle cx="36" cy="36" r="30" fill="none" stroke="#7F77DD" stroke-width="5"
+          stroke-dasharray="188.5" stroke-dashoffset="0" stroke-linecap="round" id="pomo-ring-arc"/>
+      </svg>
+      <div class="pomo-ring-center">
+        <span class="pomo-ring-min" id="pomo-ring-time">25:00</span>
+        <span class="pomo-ring-lbl">min</span>
+      </div>
+    </div>
+    <div class="pomo-info">
+      <div class="pomo-phase-name" id="pomo-phase-name">🍅 Enfoque</div>
+      <div class="pomo-phase-sub" id="pomo-phase-sub">Sesión 1 de 4</div>
+      <div class="pomo-btns">
+        <button class="pomo-btn pomo-btn-main" id="pomo-btn-main" onclick="togglePomo()">▶ Iniciar</button>
+        <button class="pomo-btn pomo-btn-skip" onclick="skipPomo()">⏭ Saltar</button>
+      </div>
+    </div>
+  </div>
+  <div class="pomo-dots" id="pomo-dots"></div>
 </div>
 
 <!-- TABS -->
@@ -984,6 +1056,7 @@ async function loadTareas() {
     renderTareas();
     renderRecurrentes();
     checkOldTareas();
+    updateBellBadge();
   } catch(e) { showToast('Error cargando tareas', true); }
 }
 
@@ -1564,11 +1637,191 @@ function escapar(str) {
   return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
+// ---- POMODORO ----
+const POMO_WORK = 25 * 60;
+const POMO_REST = 5 * 60;
+let pomoState = {
+  running: false,
+  isRest: false,
+  seconds: POMO_WORK,
+  session: 1,
+  totalSessions: 4,
+  interval: null
+};
+
+function togglePomoPanel() {
+  document.getElementById('pomo-panel').classList.toggle('show');
+}
+
+function pomoFmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function pomoRenderUI() {
+  const p = pomoState;
+  const isRest = p.isRest;
+  const total = isRest ? POMO_REST : POMO_WORK;
+  const frac = p.seconds / total;
+  const circ = 188.5;
+  const offset = circ * frac;
+
+  // Pill
+  const pill = document.getElementById('pomo-pill');
+  const dot = document.getElementById('pomo-pill-dot');
+  pill.classList.toggle('rest', isRest);
+  dot.classList.toggle('blink', p.running);
+  document.getElementById('pomo-pill-time').textContent = pomoFmt(p.seconds);
+  document.getElementById('pomo-pill-phase').textContent = isRest ? 'descanso' : 'trabajo';
+
+  // Panel ring
+  const arc = document.getElementById('pomo-ring-arc');
+  if (arc) {
+    arc.setAttribute('stroke', isRest ? '#1D9E75' : '#7F77DD');
+    arc.setAttribute('stroke-dashoffset', circ - offset);
+    const trackEl = arc.previousElementSibling;
+    if (trackEl) trackEl.setAttribute('stroke', isRest ? 'rgba(29,158,117,0.15)' : 'rgba(127,119,221,0.15)');
+  }
+  document.getElementById('pomo-ring-time').textContent = pomoFmt(p.seconds);
+  document.getElementById('pomo-ring-time').style.color = isRest ? 'var(--teal)' : 'var(--text)';
+
+  // Phase info
+  document.getElementById('pomo-phase-name').textContent = isRest ? '☕ Descanso' : '🍅 Enfoque';
+  document.getElementById('pomo-phase-name').style.color = isRest ? 'var(--teal)' : 'var(--text)';
+  document.getElementById('pomo-phase-sub').textContent = `Sesión ${p.session} de ${p.totalSessions}`;
+
+  // Main button
+  const btn = document.getElementById('pomo-btn-main');
+  btn.textContent = p.running ? '⏸ Pausar' : (p.seconds < total ? '▶ Reanudar' : '▶ Iniciar');
+  btn.classList.toggle('rest', isRest);
+
+  // Dots
+  const dotsEl = document.getElementById('pomo-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = Array.from({length: p.totalSessions}, (_, i) =>
+      `<div class="pomo-dot${i < p.session - 1 ? ' done' : ''}"></div>`
+    ).join('');
+  }
+}
+
+function togglePomo() {
+  const p = pomoState;
+  if (p.running) {
+    clearInterval(p.interval);
+    p.running = false;
+  } else {
+    p.running = true;
+    p.interval = setInterval(() => {
+      p.seconds--;
+      if (p.seconds <= 0) {
+        clearInterval(p.interval);
+        p.running = false;
+        pomoPhaseEnd();
+        return;
+      }
+      pomoRenderUI();
+    }, 1000);
+  }
+  pomoRenderUI();
+}
+
+function pomoPhaseEnd() {
+  const p = pomoState;
+  if (p.isRest) {
+    // Fin del descanso → siguiente sesión de trabajo
+    p.session = Math.min(p.session + 1, p.totalSessions);
+    p.isRest = false;
+    p.seconds = POMO_WORK;
+    pomoNotify('🍅 ¡A trabajar!', `Sesión ${p.session} de ${p.totalSessions} — 25 minutos`);
+  } else {
+    // Fin del trabajo → descanso
+    p.isRest = true;
+    p.seconds = POMO_REST;
+    pomoNotify('☕ ¡Descansa!', '5 minutos de pausa');
+  }
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  document.getElementById('pomo-panel').classList.add('show');
+  pomoRenderUI();
+}
+
+function skipPomo() {
+  clearInterval(pomoState.interval);
+  pomoState.running = false;
+  pomoState.seconds = 0;
+  pomoPhaseEnd();
+}
+
+function pomoNotify(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/JolieDo.png' });
+  }
+}
+
+// ---- NOTIFICACIONES ----
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    showToast('Notificaciones no soportadas en este navegador', true);
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    showToast('Notificaciones ya activadas ✓');
+    return;
+  }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    showToast('Notificaciones activadas ✓');
+    scheduleTaskNotifications();
+  } else {
+    showToast('Permiso denegado', true);
+  }
+}
+
+function updateBellBadge() {
+  const now = new Date();
+  const pending = tareas.filter(t => {
+    if (t.status === 'completada') return false;
+    if (!t.notificar_en) return false;
+    const notifDate = new Date(t.notificar_en);
+    return notifDate <= now;
+  });
+  const badge = document.getElementById('bell-badge');
+  if (!badge) return;
+  if (pending.length > 0) {
+    badge.textContent = pending.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function scheduleTaskNotifications() {
+  if (Notification.permission !== 'granted') return;
+  const now = new Date();
+  tareas.forEach(t => {
+    if (t.status === 'completada' || !t.notificar_en) return;
+    const notifDate = new Date(t.notificar_en);
+    const diff = notifDate - now;
+    if (diff > 0 && diff < 24 * 60 * 60 * 1000) {
+      setTimeout(() => {
+        new Notification('📋 JolieDo! — Recordatorio', {
+          body: t.nombre,
+          icon: '/JolieDo.png'
+        });
+        updateBellBadge();
+      }, diff);
+    }
+  });
+}
+
 // ---- INIT ----
 async function init() {
   try { await loadTiendas(); } catch(e) {}
   try { await loadTareas(); } catch(e) {}
   try { await loadCarritoActivo(); } catch(e) {}
+  pomoRenderUI();
+  updateBellBadge();
+  scheduleTaskNotifications();
 }
 
 init();

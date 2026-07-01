@@ -1720,10 +1720,12 @@ async function saveConsideraciones(id, valor) {
 }
 
 async function setPrioridad(id, valor, el) {
-  // Verificar límite de 3 prioridades
+  // Verificar límite de 3 prioridades por categoría
   if (valor !== null) {
-    const conPrio = tareas.filter(t => t.prioridad && t.id !== id).length;
-    if (conPrio >= 3) { showToast('Máximo 3 prioridades activas', true); return; }
+    const tarea = tareas.find(x => x.id === id);
+    const cat = tarea ? tarea.categoria : null;
+    const conPrio = tareas.filter(t => t.prioridad && t.id !== id && t.categoria === cat).length;
+    if (conPrio >= 3) { showToast(`Máximo 3 prioridades en ${cat === 'trabajo' ? 'Trabajo' : cat === 'hogar' ? 'Hogar' : 'Personal'}`, true); return; }
   }
   const t = tareas.find(x => x.id === id);
   if (t) t.prioridad = valor;

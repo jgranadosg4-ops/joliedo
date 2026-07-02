@@ -1486,21 +1486,23 @@ function updateCounts() {
 async function toggleRecurrente(id, el) {
   const isOn = el.classList.toggle('on');
   el.textContent = isOn ? '✓' : '';
+  const hoy = new Date().toISOString();
   try {
+    const patch = { recurrente_activa: isOn };
+    if (isOn) patch.fecha_creada = hoy; // resetear fecha al activar
     await supaFetch(`jd_tareas?id=eq.${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ recurrente_activa: isOn })
+      body: JSON.stringify(patch)
     });
     const t = recurrentes.find(r => r.id === id);
     if (t) {
       t.recurrente_activa = isOn;
       if (isOn) {
-        // Agregar a tareas activas si no está ya
+        t.fecha_creada = hoy;
         if (!tareas.find(x => x.id === id)) {
           tareas.push({ ...t, es_recurrente: false });
         }
       } else {
-        // Quitar de tareas activas
         tareas = tareas.filter(x => x.id !== id);
       }
       renderTareas();

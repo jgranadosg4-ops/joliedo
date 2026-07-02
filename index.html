@@ -1645,113 +1645,283 @@ async function loadHistorialCompras() {
 function renderDashboard() {
   const container = document.getElementById('dashboard-container');
   if (!container) return;
+
   const now = new Date();
   const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart - 6 * 24 * 60 * 60 * 1000);
+
   const pendientes = tareas.filter(t => t.status === 'pendiente');
-  const completadasSemana = completadas.filter(c => {
-    if (!c.timeStr) return true; // si no tiene fecha, contar igual
-    return true; // todas las del array completadas son recientes (últimas 48h)
-  });
   const conPrioridad = pendientes.filter(t => t.prioridad);
   const atrasadas = pendientes.filter(t => t.fecha_creada && new Date(t.fecha_creada) <= weekAgo);
-  const cats = [
-    { key: 'trabajo', label: '💼 Trabajo', color: '#7F77DD' },
-    { key: 'hogar', label: '🏠 Hogar', color: '#1D9E75' },
-    { key: 'ideas', label: '👤 Personal', color: '#D4537E' }
-  ];
-  const catData = cats.map(cat => {
-    const cp = pendientes.filter(t => t.categoria === cat.key);
-    const avances = cp.map(t => t.avance || 0);
-    const avg = avances.length ? Math.round(avances.reduce((a,b) => a+b, 0) / avances.length) : 0;
-    const prios = cp.filter(t => t.prioridad).length;
-    return { ...cat, count: cp.length, avg, prios };
-  });
   const prioritarias = pendientes.filter(t => t.prioridad === 1 || t.prioridad === 2)
     .sort((a,b) => (a.prioridad||9) - (b.prioridad||9)).slice(0, 5);
   const recordatorios = tareas.filter(t => t.notificar_en && new Date(t.notificar_en) > now && t.status === 'pendiente')
     .sort((a,b) => new Date(a.notificar_en) - new Date(b.notificar_en)).slice(0, 3);
   const enSeguimiento = tareas.filter(t => t.repetir_dias)
     .sort((a,b) => new Date(a.fecha_creada) - new Date(b.fecha_creada));
-
   const catColor = { trabajo: '#7F77DD', hogar: '#1D9E75', ideas: '#D4537E' };
+  const catLabel = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '👤 Personal' };
+
+  function getCompletadasPeriodo(periodo) {
+    return completadas.filter(c => {
+      if (!c.timeStr) return true;
+      return true;
+    }).length;
+  }
+
+  function getCatData(periodo) {
+    return ['trabajo','hogar','ideas'].map(key => {
+      const cp = pendientes.filter(t => t.categoria === key);
+      const avances = cp.map(t => t.avance || 0);
+      const avg = avances.length ? Math.round(avances.reduce((a,b)=>a+b,0)/avances.length) : 0;
+      const prios = cp.filter(t => t.prioridad).length;
+      return { key, count: cp.length, avg, prios };
+    });
+  }
+
+  const periodos = {
+    hoy:    { pendientes: pendientes.length, completadas: getCompletadasPeriodo('hoy'), prioridad: conPrioridad.length, atrasadas: atrasadas.length, cats: getCatData('hoy') },
+    semana: { pendientes: pendientes.length, completadas: getCompletadasPeriodo('semana'), prioridad: conPrioridad.length, atrasadas: atrasadas.length, cats: getCatData('semana') },
+    mes:    { pendientes: pendientes.length, completadas: completadas.length, prioridad: conPrioridad.length, atrasadas: atrasadas.length, cats: getCatData('mes') },
+  };
+  const maxVals = { pendientes: 15, completadas: 30, prioridad: 9, atrasadas: 9 };
+  const MAX_BARS = 8;
+
+  function gaugesSVG(id, color) {
+    return `<div style="position:relative;width:80px;height:44px;margin-bottom:8px;">
+      <svg width="80" height="44" viewBox="0 0 80 44" style="overflow:visible;">
+        <path d="M6,42 A34,34 0 0,1 74,42" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5" stroke-linecap="round"/>
+        <path id="db-arc-${id}" d="M6,42 A34,34 0 0,1 74,42" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="107"/>
+        <line id="db-needle-${id}" x1="40" y1="42" x2="40" y2="18" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="40" cy="42" r="3.5" fill="${color}"/>
+      </svg>
+      <div id="db-num-${id}" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:20px;font-weight:500;color:var(--text);line-height:1;">0</div>
+    </div>`;
+  }
+
+  function barsHTML(catKey, count) {
+    const color = catColor[catKey];
+    const n = Math.min(count, MAX_BARS);
+    let html = '<div style="display:flex;gap:3px;align-items:flex-end;" id="db-bars-' + catKey + '">';
+    for (let i=0; i<n; i++) {
+      html += `<div style="width:8px;height:28px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div class="db-bar-fill" style="width:100%;height:0%;background:${color};border-radius:3px;transition:height 0.45s ease;"></div>
+      </div>`;
+    }
+    html += '</div>';
+    return html;
+  }
+
+  const initialCats = getCatData('mes');
 
   container.innerHTML = `
-    <div style="padding:12px;">
-      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Resumen general</div>
-      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:16px;">
-        ${[
-          { num: pendientes.length, lbl: 'Pendientes', color: '#7F77DD' },
-          { num: completadasSemana.length, lbl: 'Completadas esta semana', color: '#1D9E75' },
-          { num: conPrioridad.length, lbl: 'Con prioridad activa', color: '#E24B4A' },
-          { num: atrasadas.length, lbl: 'Sin hacer +7 días', color: '#BA7517' }
-        ].map(m => `
-          <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;">
-            <div style="height:3px;border-radius:2px;background:${m.color};margin-bottom:10px;"></div>
-            <div style="font-size:26px;font-weight:500;color:var(--text);line-height:1;margin-bottom:2px;">${m.num}</div>
-            <div style="font-size:12px;color:var(--text2);">${m.lbl}</div>
-          </div>`).join('')}
+  <div style="padding:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;">Resumen general</div>
+      <div style="display:flex;gap:4px;">
+        <div class="db-pp" onclick="dbSetPeriod('hoy',this)" style="font-size:11px;padding:4px 10px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap;">Hoy</div>
+        <div class="db-pp" onclick="dbSetPeriod('semana',this)" style="font-size:11px;padding:4px 10px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap;">Semana</div>
+        <div class="db-pp db-pp-on" onclick="dbSetPeriod('mes',this)" style="font-size:11px;padding:4px 10px;border-radius:20px;border:0.5px solid #7F77DD;background:#7F77DD;color:#fff;cursor:pointer;white-space:nowrap;">Mes</div>
       </div>
+    </div>
 
-      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Por categoría</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-        ${catData.map(cat => `
-          <div onclick="goToCat('${cat.key}')" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <div style="font-size:13px;font-weight:500;color:var(--text);">${cat.label}</div>
-              <span style="font-size:11px;color:var(--text2);background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;padding:2px 7px;">${cat.count} pendiente${cat.count !== 1 ? 's' : ''}</span>
-            </div>
-            <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px;">
-              <div style="height:100%;width:${cat.avg}%;background:${cat.color};border-radius:3px;"></div>
-            </div>
-            <div style="font-size:11px;color:var(--text2);display:flex;justify-content:space-between;">
-              <span>Avance promedio: ${cat.avg}%</span>
-              <span>${cat.prios > 0 ? `${cat.prios} prioridad${cat.prios > 1 ? 'es' : ''} 🔥` : 'Sin prioridades'}</span>
-            </div>
-          </div>`).join('')}
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:14px 10px 10px;display:flex;flex-direction:column;align-items:center;cursor:pointer;" onclick="goToCat('todos')">
+        ${gaugesSVG('pendientes','#7F77DD')}
+        <div style="font-size:11px;color:var(--text2);text-align:center;">Pendientes</div>
       </div>
-
-      ${prioritarias.length ? `
-      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Prioritarias ahora</div>
-      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
-        ${prioritarias.map((t,i) => `
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i < prioritarias.length-1 ? 'border-bottom:0.5px solid var(--border);' : ''}">
-            <div style="width:7px;height:7px;border-radius:50%;background:${catColor[t.categoria]||'#888'};flex-shrink:0;"></div>
-            <span style="font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
-            <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:${t.prioridad===1?'#FCEBEB':'#FAEEDA'};color:${t.prioridad===1?'#A32D2D':'#854F0B'};flex-shrink:0;">P${t.prioridad}</span>
-            <span style="font-size:11px;color:var(--text2);flex-shrink:0;">${t.avance||0}%</span>
-          </div>`).join('')}
-      </div>` : ''}
-
-      ${recordatorios.length ? `
-      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Recordatorios próximos</div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
-        ${recordatorios.map(t => `
-          <div style="background:var(--bg2);border:0.5px solid var(--border-accent, #7F77DD);border-radius:12px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
-            <span style="font-size:16px;flex-shrink:0;margin-top:1px;">🔔</span>
-            <div>
-              <div style="font-size:11px;color:var(--purple);font-weight:500;">${formatNotifTime(t.notificar_en)}</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.4;">${t.nombre}</div>
-            </div>
-          </div>`).join('')}
-      </div>` : ''}
-
-      <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">🔄 En seguimiento</div>
-      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
-        ${enSeguimiento.length === 0 ? `<div style="padding:10px 0;font-size:13px;color:var(--text2);">Sin tareas en seguimiento</div>` :
-        enSeguimiento.map((t,i) => {
-          const proxima = t.fecha_creada ? new Date(t.fecha_creada) : null;
-          const diasRestantes = proxima ? Math.max(0, Math.ceil((proxima - now) / 86400000)) : null;
-          const proxLabel = diasRestantes === 0 ? 'Hoy' : diasRestantes === 1 ? 'Mañana' : diasRestantes !== null ? `En ${diasRestantes}d` : '—';
-          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i < enSeguimiento.length-1 ? 'border-bottom:0.5px solid var(--border);' : ''}">
-            <span style="font-size:14px;">🔄</span>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</div>
-              <div style="font-size:11px;color:var(--text2);">Próxima: ${proxLabel} · Hecho ${t.veces_completada||0}x · cada ${t.repetir_dias}d</div>
-            </div>
-          </div>`;
-        }).join('')}
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:14px 10px 10px;display:flex;flex-direction:column;align-items:center;">
+        ${gaugesSVG('completadas','#1D9E75')}
+        <div style="font-size:11px;color:var(--text2);text-align:center;">Completadas</div>
       </div>
-    </div>`;
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:14px 10px 10px;display:flex;flex-direction:column;align-items:center;">
+        ${gaugesSVG('prioridad','#E24B4A')}
+        <div style="font-size:11px;color:var(--text2);text-align:center;">Con prioridad</div>
+      </div>
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:14px 10px 10px;display:flex;flex-direction:column;align-items:center;">
+        ${gaugesSVG('atrasadas','#BA7517')}
+        <div style="font-size:11px;color:var(--text2);text-align:center;">Sin hacer +7d</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Por categoría</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      ${initialCats.map(cat => `
+        <div onclick="goToCat('${cat.key}')" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:500;color:var(--text);">${catLabel[cat.key]}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="db-catnum-${cat.key}" style="font-size:18px;font-weight:500;color:var(--text);">0</span>
+              ${barsHTML(cat.key, 0)}
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);display:flex;justify-content:space-between;">
+            <span id="db-catavg-${cat.key}">Avance: 0%</span>
+            <span id="db-catprio-${cat.key}">Sin prioridades</span>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    ${prioritarias.length ? `
+    <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Prioritarias ahora</div>
+    <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
+      ${prioritarias.map((t,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i<prioritarias.length-1?'border-bottom:0.5px solid var(--border);':''}">
+          <div style="width:7px;height:7px;border-radius:50%;background:${catColor[t.categoria]||'#888'};flex-shrink:0;"></div>
+          <span style="font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
+          <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:${t.prioridad===1?'#FCEBEB':'#FAEEDA'};color:${t.prioridad===1?'#A32D2D':'#854F0B'};flex-shrink:0;">P${t.prioridad}</span>
+          <span style="font-size:11px;color:var(--text2);flex-shrink:0;">${t.avance||0}%</span>
+        </div>`).join('')}
+    </div>` : ''}
+
+    ${recordatorios.length ? `
+    <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Recordatorios próximos</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+      ${recordatorios.map(t => `
+        <div style="background:var(--bg2);border:0.5px solid rgba(127,119,221,0.4);border-radius:12px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+          <span style="font-size:16px;flex-shrink:0;margin-top:1px;">🔔</span>
+          <div>
+            <div style="font-size:11px;color:var(--purple);font-weight:500;">${formatNotifTime(t.notificar_en)}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.4;">${t.nombre}</div>
+          </div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">🔄 En seguimiento</div>
+    <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:12px;padding:4px 14px;margin-bottom:16px;">
+      ${enSeguimiento.length === 0
+        ? '<div style="padding:10px 0;font-size:13px;color:var(--text2);">Sin tareas en seguimiento</div>'
+        : enSeguimiento.map((t,i) => {
+            const proxima = t.fecha_creada ? new Date(t.fecha_creada) : null;
+            const dias = proxima ? Math.max(0, Math.ceil((proxima - now) / 86400000)) : null;
+            const proxLabel = dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : dias !== null ? `En ${dias}d` : '—';
+            return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i<enSeguimiento.length-1?'border-bottom:0.5px solid var(--border);':''}">
+              <span style="font-size:14px;">🔄</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</div>
+                <div style="font-size:11px;color:var(--text2);">Próxima: ${proxLabel} · Hecho ${t.veces_completada||0}x · cada ${t.repetir_dias}d</div>
+              </div>
+            </div>`;
+          }).join('')}
+    </div>
+  </div>`;
+
+  window._dbPeriodos = periodos;
+  window._dbMaxVals = maxVals;
+  window._dbAnimating = false;
+  dbSetPeriod('mes', container.querySelector('.db-pp-on'));
+}
+
+function dbEaseOut(t) { return 1 - Math.pow(1-t, 3); }
+
+function dbAnimateGauge(id, fromFrac, toFrac, fromNum, toNum, duration, delay) {
+  const arc = document.getElementById('db-arc-' + id);
+  const needle = document.getElementById('db-needle-' + id);
+  const num = document.getElementById('db-num-' + id);
+  if (!arc) return;
+  setTimeout(() => {
+    const start = performance.now();
+    function frame(now2) {
+      const t = Math.min((now2 - start) / duration, 1);
+      const e = dbEaseOut(t);
+      const frac = fromFrac + (toFrac - fromFrac) * e;
+      arc.setAttribute('stroke-dashoffset', 107 - frac * 107);
+      const angle = -90 + frac * 180;
+      const rad = (angle - 90) * Math.PI / 180;
+      const nx = 40 + 26 * Math.cos(rad);
+      const ny = 42 + 26 * Math.sin(rad);
+      needle.setAttribute('x2', nx.toFixed(1));
+      needle.setAttribute('y2', ny.toFixed(1));
+      if (num) num.textContent = Math.round(fromNum + (toNum - fromNum) * e);
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }, delay);
+}
+
+function dbRenderBars(catKey, count, delay) {
+  setTimeout(() => {
+    const wrap = document.getElementById('db-bars-' + catKey);
+    if (!wrap) return;
+    const color = { trabajo: '#7F77DD', hogar: '#1D9E75', ideas: '#D4537E' }[catKey];
+    const MAX_BARS = 8;
+    const n = Math.min(count, MAX_BARS);
+    wrap.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const track = document.createElement('div');
+      track.style.cssText = 'width:8px;height:28px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;';
+      const fill = document.createElement('div');
+      fill.style.cssText = `width:100%;height:0%;background:${color};border-radius:3px;transition:height 0.45s ease;`;
+      track.appendChild(fill);
+      wrap.appendChild(track);
+      const idx = i;
+      setTimeout(() => { fill.style.height = '100%'; }, idx * 80);
+    }
+  }, delay);
+}
+
+function dbSetPeriod(p, el) {
+  if (window._dbAnimating) return;
+  window._dbAnimating = true;
+  document.querySelectorAll('.db-pp').forEach(x => {
+    x.style.background = 'var(--bg2)';
+    x.style.color = 'var(--text2)';
+    x.style.borderColor = 'var(--border)';
+  });
+  if (el) {
+    el.style.background = '#7F77DD';
+    el.style.color = '#fff';
+    el.style.borderColor = '#7F77DD';
+  }
+  const target = window._dbPeriodos[p];
+  const maxVals = window._dbMaxVals;
+  if (!target) { window._dbAnimating = false; return; }
+  const ids = ['pendientes','completadas','prioridad','atrasadas'];
+  const keys = ['pendientes','completadas','prioridad','atrasadas'];
+
+  const current = {};
+  ids.forEach(id => {
+    const n = parseInt((document.getElementById('db-num-' + id)||{}).textContent) || 0;
+    current[id] = n / maxVals[id];
+  });
+
+  // Fase 1: bajar a cero
+  ids.forEach((id, i) => {
+    const cn = parseInt((document.getElementById('db-num-' + id)||{}).textContent) || 0;
+    dbAnimateGauge(id, current[id], 0, cn, 0, 280, i * 35);
+  });
+
+  // Reset bars
+  ['trabajo','hogar','ideas'].forEach(cat => {
+    const wrap = document.getElementById('db-bars-' + cat);
+    if (wrap) wrap.innerHTML = '';
+    const n = document.getElementById('db-catnum-' + cat);
+    if (n) n.textContent = '0';
+  });
+
+  // Fase 2: subir al nuevo valor
+  const targetNums = [target.pendientes, target.completadas, target.prioridad, target.atrasadas];
+  ids.forEach((id, i) => {
+    const toFrac = Math.min(targetNums[i] / maxVals[id], 1);
+    dbAnimateGauge(id, 0, toFrac, 0, targetNums[i], 500, 380 + i * 60);
+  });
+
+  // Categorías
+  setTimeout(() => {
+    target.cats.forEach(cat => {
+      const numEl = document.getElementById('db-catnum-' + cat.key);
+      const avgEl = document.getElementById('db-catavg-' + cat.key);
+      const prioEl = document.getElementById('db-catprio-' + cat.key);
+      if (numEl) numEl.textContent = cat.count;
+      if (avgEl) avgEl.textContent = `Avance: ${cat.avg}%`;
+      if (prioEl) prioEl.textContent = cat.prios ? `${cat.prios} prioridad${cat.prios>1?'es':''} 🔥` : 'Sin prioridades';
+      dbRenderBars(cat.key, cat.count, 0);
+    });
+  }, 420);
+
+  setTimeout(() => { window._dbAnimating = false; }, 1100);
 }
 
 function goToCat(cat) {

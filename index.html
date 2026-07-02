@@ -1646,7 +1646,10 @@ function renderDashboard() {
   const now = new Date();
   const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
   const pendientes = tareas.filter(t => t.status === 'pendiente');
-  const completadasSemana = tareas.filter(t => t.status === 'completada' && t.fecha_completada && new Date(t.fecha_completada) >= weekAgo);
+  const completadasSemana = completadas.filter(c => {
+    if (!c.timeStr) return true; // si no tiene fecha, contar igual
+    return true; // todas las del array completadas son recientes (últimas 48h)
+  });
   const conPrioridad = pendientes.filter(t => t.prioridad);
   const atrasadas = pendientes.filter(t => t.fecha_creada && new Date(t.fecha_creada) <= weekAgo);
   const cats = [

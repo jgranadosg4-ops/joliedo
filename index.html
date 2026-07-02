@@ -157,7 +157,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .avance-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .avance-btn { padding: 5px 12px; border-radius: 16px; font-size: 12px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); cursor: pointer; }
 .avance-btn.on { border-color: var(--purple); background: rgba(127,119,221,0.15); color: var(--purple); font-weight: 600; }
-.consideraciones-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; resize: none; min-height: 60px; font-family: inherit; }
+.consideraciones-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px; outline: none; resize: none; min-height: 100px; font-family: inherit; }
 .consideraciones-input:focus { border-color: var(--purple); }
 
 /* HISTORIAL */
@@ -1122,14 +1122,13 @@ function renderTareas() {
       let diasPasados = 0;
       let diasLabel = 'Hoy';
       if (t.fecha_creada) {
-        // Comparar en UTC para evitar problemas de zona horaria
         const creada = new Date(t.fecha_creada);
         const hoy = new Date();
-        // Normalizar ambas a medianoche UTC
-        const creadaUTC = Date.UTC(creada.getUTCFullYear(), creada.getUTCMonth(), creada.getUTCDate());
-        const hoyUTC = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate());
-        diasPasados = Math.round((hoyUTC - creadaUTC) / 86400000);
-        if (diasPasados === 0) diasLabel = 'Hoy';
+        // Comparar usando fecha local para evitar el bug de -1 día
+        const creadaLocal = new Date(creada.getFullYear(), creada.getMonth(), creada.getDate());
+        const hoyLocal = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        diasPasados = Math.round((hoyLocal - creadaLocal) / 86400000);
+        if (diasPasados <= 0) diasLabel = 'Hoy';
         else if (diasPasados === 1) diasLabel = 'Hace 1 día';
         else diasLabel = `Hace ${diasPasados} días`;
       }
@@ -1363,7 +1362,7 @@ async function completeTask(id, nombre, cat, checkEl) {
           tarea.fecha_creada = nuevaFecha;
           tarea.veces_completada = vecesCompletada;
         }
-        addToCompleted(nombre, cat);
+        addToCompleted(nombre, cat, id, tarea ? tarea.consideraciones : null);
         try {
           await supaFetch(`jd_tareas?id=eq.${id}`, {
             method: 'PATCH',
@@ -1377,7 +1376,7 @@ async function completeTask(id, nombre, cat, checkEl) {
         tareas = tareas.filter(t => t.id !== id);
         updateCounts();
         checkOldTareas();
-        addToCompleted(nombre, cat);
+        addToCompleted(nombre, cat, id, tarea ? tarea.consideraciones : null);
         try {
           await supaFetch(`jd_tareas?id=eq.${id}`, {
             method: 'PATCH',
@@ -1389,11 +1388,10 @@ async function completeTask(id, nombre, cat, checkEl) {
   }, 400);
 }
 
-function addToCompleted(nombre, cat) {
-  const labels = { trabajo: '💼', hogar: '🏠', ideas: '👤' };
+function addToCompleted(nombre, cat, id, consideraciones) {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-  completadas.push({ nombre, cat, timeStr });
+  completadas.push({ nombre, cat, timeStr, id: id || null, consideraciones: consideraciones || null });
   renderCompletadas();
 }
 
@@ -1401,12 +1399,62 @@ function renderCompletadas() {
   const list = document.getElementById('list-completadas');
   const filtradas = currentFilter === 'todos' ? completadas : completadas.filter(c => c.categoria === currentFilter || c.cat === currentFilter);
   const labels = { trabajo: '💼', hogar: '🏠', ideas: '👤' };
-  list.innerHTML = filtradas.map(c =>
-    `<div class="done-task"><div class="done-check">✓</div><div class="done-name">${labels[c.cat]||''} ${c.nombre}</div><div class="done-date">${c.timeStr}</div></div>`
+  list.innerHTML = filtradas.map((c, idx) => `
+    <div class="task-row" id="comp-${idx}" style="flex-direction:column;align-items:stretch;opacity:0.7;">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleCompDetail(${idx})">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--teal);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex-shrink:0;">✓</div>
+        <div style="flex:1;min-width:0;">
+          <div class="task-text" style="text-decoration:line-through;color:var(--text2);">${labels[c.cat]||''} ${c.nombre}</div>
+          <div class="task-sub">${c.timeStr}</div>
+        </div>
+        <span style="font-size:12px;color:var(--text2);">▾</span>
+      </div>
+      <div class="task-detail" id="comp-detail-${idx}">
+        ${c.consideraciones ? `<div class="task-detail-label" style="margin-top:8px;">Consideraciones</div>
+        <div style="font-size:13px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:8px 10px;margin-top:4px;">${c.consideraciones}</div>` : ''}
+        <div style="margin-top:10px;">
+          <div class="fpill" style="background:rgba(29,158,117,0.12);border-color:rgba(29,158,117,0.4);color:var(--teal);" onclick="restaurarTarea(${idx})">↩ Restaurar tarea</div>
+        </div>
+      </div>
+    </div>`
   ).join('');
   const hasItems = completadas.length > 0;
   document.getElementById('sec-completadas').classList.toggle('hidden', !hasItems);
   document.getElementById('cnt-completadas').textContent = completadas.length;
+}
+
+function toggleCompDetail(idx) {
+  const detail = document.getElementById('comp-detail-' + idx);
+  if (detail) detail.classList.toggle('show');
+}
+
+function restaurarTarea(idx) {
+  const c = completadas[idx];
+  if (!c) return;
+  // Restaurar a tareas
+  const tareaRestaurada = {
+    id: c.id || Date.now().toString(),
+    nombre: c.nombre,
+    categoria: c.cat,
+    status: 'pendiente',
+    avance: 0,
+    prioridad: null,
+    consideraciones: c.consideraciones || null,
+    fecha_creada: new Date().toISOString(),
+    es_recurrente: false
+  };
+  tareas.push(tareaRestaurada);
+  completadas.splice(idx, 1);
+  // Intentar revertir en Supabase si tiene id
+  if (c.id) {
+    supaFetch(`jd_tareas?id=eq.${c.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'pendiente', fecha_completada: null })
+    }).catch(e => console.warn('restaurar patch:', e));
+  }
+  renderTareas();
+  renderCompletadas();
+  showToast('↩ Tarea restaurada');
 }
 
 function limpiarCompletadas() {
@@ -2179,8 +2227,10 @@ async function requestNotifPermission() {
     showToast('Notificaciones no soportadas en este navegador', true);
     return;
   }
+  // Si ya tiene permiso, limpiar el badge al tocar
   if (Notification.permission === 'granted') {
-    showToast('Notificaciones ya activadas ✓');
+    document.getElementById('bell-badge').classList.add('hidden');
+    showToast('Notificaciones activas ✓');
     return;
   }
   const result = await Notification.requestPermission();

@@ -2359,7 +2359,13 @@ function pomoRestore() {
     pomoState.isRest = saved.isRest;
     pomoState.session = saved.session || 1;
     pomoState.seconds = Math.max(0, seconds);
-    pomoState.running = false; // siempre arranca pausado al reabrir
+    pomoState.running = false;
+    // Si estaba corriendo al cerrar, reanudar automáticamente
+    if (saved.running && seconds > 0) {
+      setTimeout(() => {
+        if (!pomoState.running) togglePomo();
+      }, 500); // esperar a que el UI esté listo
+    }
   } catch(e) {}
 }
 

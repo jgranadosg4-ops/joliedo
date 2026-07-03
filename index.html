@@ -2326,6 +2326,43 @@ let pomoState = {
   interval: null
 };
 
+function pomoSave() {
+  const s = pomoState;
+  localStorage.setItem('pomo', JSON.stringify({
+    running: s.running,
+    isRest: s.isRest,
+    session: s.session,
+    savedAt: Date.now(),
+    secondsAtSave: s.seconds
+  }));
+}
+
+function pomoRestore() {
+  try {
+    const raw = localStorage.getItem('pomo');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    const elapsed = Math.floor((Date.now() - saved.savedAt) / 1000);
+    const total = saved.isRest ? POMO_REST : POMO_WORK;
+    let seconds = saved.secondsAtSave - (saved.running ? elapsed : 0);
+    // Avanzar fases si pasó mucho tiempo
+    while (seconds <= 0) {
+      if (!saved.isRest) {
+        saved.isRest = true;
+        seconds += POMO_REST;
+      } else {
+        saved.isRest = false;
+        saved.session = Math.min((saved.session || 1) + 1, 4);
+        seconds += POMO_WORK;
+      }
+    }
+    pomoState.isRest = saved.isRest;
+    pomoState.session = saved.session || 1;
+    pomoState.seconds = Math.max(0, seconds);
+    pomoState.running = false; // siempre arranca pausado al reabrir
+  } catch(e) {}
+}
+
 function togglePomoPanel() {
   document.getElementById('pomo-panel').classList.toggle('show');
 }
@@ -2391,6 +2428,7 @@ function togglePomo() {
     p.running = true;
     p.interval = setInterval(() => {
       p.seconds--;
+      pomoSave();
       if (p.seconds <= 0) {
         clearInterval(p.interval);
         p.running = false;
@@ -2419,6 +2457,7 @@ function pomoPhaseEnd() {
   }
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   playPomoSound();
+  pomoSave();
   document.getElementById('pomo-panel').classList.add('show');
   pomoRenderUI();
 }
@@ -2459,15 +2498,7 @@ async function requestNotifPermission() {
 async function refreshApp() {
   const btn = document.getElementById('refresh-btn');
   if (btn) btn.style.transform = 'rotate(360deg)';
-  try {
-    await loadTiendas();
-    await loadTareas();
-    await loadCarritoActivo();
-    showToast('Actualizado ✓');
-  } catch(e) {
-    showToast('Error al actualizar', true);
-  }
-  setTimeout(() => { if (btn) btn.style.transform = 'rotate(0deg)'; }, 500);
+  setTimeout(() => { location.reload(); }, 400);
 }
 
 function openNotifModal() {
@@ -2585,6 +2616,7 @@ async function init() {
   try { await loadTiendas(); } catch(e) {}
   try { await loadTareas(); } catch(e) {}
   try { await loadCarritoActivo(); } catch(e) {}
+  pomoRestore();
   pomoRenderUI();
   updateBellBadge();
   scheduleTaskNotifications();

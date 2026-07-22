@@ -367,19 +367,19 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 <div class="screen show" id="screen-pendientes">
 
   <div class="filter-row">
-    <div class="fpill on" onclick="setFilter('todos',this)">Todos</div>
+    <div class="fpill" onclick="setFilter('todos',this)">Todos</div>
     <div class="fpill" onclick="setFilter('trabajo',this)">💼 Trabajo</div>
     <div class="fpill" onclick="setFilter('hogar',this)">🏠 Hogar</div>
     <div class="fpill" onclick="setFilter('ideas',this)">👤 Personal</div>
-    <div class="fpill" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊 Dashboard</div>
+    <div class="fpill on" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊 Dashboard</div>
   </div>
 
   <!-- DASHBOARD (oculto por defecto) -->
-  <div id="dashboard-wrapper" style="display:none;">
+  <div id="dashboard-wrapper" style="display:block;">
     <div id="dashboard-container"></div>
   </div>
 
-  <div id="tareas-wrapper">
+  <div id="tareas-wrapper" style="display:none;">
     <div class="warn-row hidden" id="warn-old">
       <span style="font-size:16px;">⏰</span>
       <div class="warn-txt" id="warn-old-txt">Tienes pendientes con más de 7 días sin hacer</div>
@@ -796,6 +796,8 @@ function renderCatalogo(listOverride) {
     });
     div.addEventListener('click', (e) => {
       if (didLongPress) { didLongPress = false; e.preventDefault(); e.stopPropagation(); return; }
+      // En desktop (no touch) el click es el único evento — agregar al carrito
+      if (!('ontouchstart' in window)) addToCart(p.id, p.emoji, p.nombre);
     });
     div.innerHTML = `<div class="cat-emoji">${p.emoji || '🛒'}</div><div class="cat-name">${p.nombre}</div>`;
     grid.appendChild(div);
@@ -2626,6 +2628,7 @@ async function init() {
   pomoRenderUI();
   updateBellBadge();
   scheduleTaskNotifications();
+  renderDashboard();
 }
 
 init();

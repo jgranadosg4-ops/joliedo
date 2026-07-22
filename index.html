@@ -2331,16 +2331,38 @@ function closeChainModal(e) {
 }
 
 function scrollToTask(id) {
-  // Ir a pendientes, expandir la tarea y hacer scroll
-  if (currentFilter === 'dashboard') setFilter('todos', document.querySelector('.fpill'));
-  setTimeout(() => {
-    const el = document.getElementById('task-' + id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const detail = document.getElementById('detail-' + id);
-      if (detail) detail.classList.add('show');
-    }
-  }, 100);
+  const enPendientes = tareas.find(t => t.id === id);
+  if (enPendientes) {
+    // Ir a pendientes y hacer scroll
+    if (currentFilter === 'dashboard') setFilter('todos', document.querySelectorAll('.fpill')[0]);
+    setTimeout(() => {
+      const el = document.getElementById('task-' + id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const detail = document.getElementById('detail-' + id);
+        if (detail) detail.classList.add('show');
+      }
+    }, 100);
+  } else {
+    // Está en completadas — ir a Pendientes > sección completadas
+    if (currentFilter === 'dashboard') setFilter('todos', document.querySelectorAll('.fpill')[0]);
+    setTimeout(() => {
+      const secComp = document.getElementById('sec-completadas');
+      if (secComp) {
+        secComp.classList.remove('hidden');
+        const body = document.getElementById('body-completadas');
+        if (body) body.classList.remove('hidden');
+        secComp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Abrir el detalle de esa tarea completada
+        setTimeout(() => {
+          const compDetail = document.getElementById('comp-detail-' + id);
+          if (compDetail) compDetail.classList.add('show');
+          const compEl = document.getElementById('comp-' + id);
+          if (compEl) compEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 400);
+      }
+    }, 100);
+  }
 }
 
 // ---- RESTAURAR CARRITO ----

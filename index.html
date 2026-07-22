@@ -2243,7 +2243,7 @@ async function restaurarCarrito() {
     const items = await supaFetch(`jd_carrito_items?carrito_id=eq.${carritoId}&select=producto_id`);
     if (!items || items.length === 0) { showToast('No hay items para restaurar', true); return; }
 
-    let targetCarritoId = carritoActivo?.id;
+    let targetCarritoId = carritoActivoId;
 
     // Si no hay carrito activo, crear uno nuevo
     if (!targetCarritoId) {
@@ -2256,7 +2256,7 @@ async function restaurarCarrito() {
     }
 
     // Agregar items al carrito activo (evitar duplicados)
-    const existentes = carritoActivo ? Object.keys(cart) : [];
+    const existentes = carritoActivoId ? Object.keys(cart) : [];
     const nuevosItems = items
       .filter(i => !existentes.includes(i.producto_id))
       .map(i => ({ carrito_id: targetCarritoId, producto_id: i.producto_id, comprado: false }));

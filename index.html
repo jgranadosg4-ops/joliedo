@@ -2305,23 +2305,43 @@ function derivarTarea(parentId, parentNombre, categoria) {
 function openChainModal(id) {
   const chain = _buildChain(id);
   const list = document.getElementById('chain-modal-list');
-  list.innerHTML = chain.map((node, i) => {
-    const isLast = i === chain.length - 1;
-    const statusIcon = node.status === 'completada' ? '✅' : '🔵';
-    const isCurrent = node.isCurrent;
-    return `
-      <div style="display:flex;gap:10px;align-items:flex-start;">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
-          <div style="font-size:14px;">${statusIcon}</div>
-          ${!isLast ? `<div style="width:1px;height:24px;background:var(--border);margin:2px 0;"></div>` : ''}
-        </div>
-        <div onclick="closeChainModal();scrollToTask('${node.id}')"
-          style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid ${isCurrent ? 'var(--purple)' : 'var(--border)'};background:${isCurrent ? 'rgba(127,119,221,0.08)' : 'var(--bg3)'};cursor:pointer;margin-bottom:${!isLast ? '4px' : '0'};">
-          <div style="font-size:13px;color:${isCurrent ? 'var(--purple)' : 'var(--text)'};font-weight:${isCurrent ? '500' : '400'};">${node.nombre}</div>
-          ${isCurrent ? `<div style="font-size:10px;color:var(--purple);margin-top:2px;">← estás aquí</div>` : ''}
-        </div>
-      </div>`;
-  }).join('');
+
+  function renderChain(selectedId) {
+    const catLabel = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '👤 Personal' };
+    list.innerHTML = chain.map((node, i) => {
+      const isLast = i === chain.length - 1;
+      const statusIcon = node.status === 'completada' ? '✅' : '🔵';
+      const isCurrent = node.isCurrent;
+      const isSelected = node.id === selectedId;
+      const t = tareas.find(x => x.id === node.id) || completadas.find(x => x.id === node.id);
+      return `
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="font-size:14px;">${statusIcon}</div>
+            ${!isLast ? `<div style="width:1px;height:${isSelected && t ? '80px' : '24px'};background:var(--border);margin:2px 0;transition:height 0.3s;"></div>` : ''}
+          </div>
+          <div style="flex:1;margin-bottom:${!isLast ? '4px' : '0'};">
+            <div onclick="renderChainNode('${node.id}')"
+              style="padding:8px 10px;border-radius:10px;border:1px solid ${isCurrent ? 'var(--purple)' : isSelected ? 'var(--border)' : 'var(--border)'};background:${isCurrent ? 'rgba(127,119,221,0.08)' : isSelected ? 'var(--bg2)' : 'var(--bg3)'};cursor:pointer;">
+              <div style="font-size:13px;color:${isCurrent ? 'var(--purple)' : 'var(--text)'};font-weight:${isCurrent ? '500' : '400'};">${node.nombre}</div>
+              ${isCurrent ? `<div style="font-size:10px;color:var(--purple);margin-top:2px;">← estás aquí</div>` : ''}
+            </div>
+            ${isSelected && t ? `
+            <div style="margin-top:6px;padding:10px 12px;background:var(--bg2);border-radius:10px;border:0.5px solid var(--border);">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">${catLabel[t.categoria]||''} · ${node.status === 'completada' ? '✅ Completada' : '🔵 Pendiente'}</div>
+              ${t.avance !== undefined ? `<div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Avance: ${t.avance||0}%</div>` : ''}
+              ${t.consideraciones ? `<div style="font-size:12px;color:var(--text);line-height:1.4;">${t.consideraciones}</div>` : '<div style="font-size:12px;color:var(--text2);">Sin consideraciones</div>'}
+            </div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  window.renderChainNode = function(nodeId) {
+    renderChain(nodeId);
+  };
+
+  renderChain(null);
   document.getElementById('chain-modal').style.display = 'flex';
 }
 

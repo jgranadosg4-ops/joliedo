@@ -499,6 +499,17 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
   </div>
 </div>
 
+<!-- MODAL CADENA DE TAREAS -->
+<div id="chain-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="closeChainModal(event)">
+  <div style="background:var(--bg2);border-radius:16px;border:0.5px solid var(--border);width:100%;max-width:360px;overflow:hidden;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border);">
+      <div style="font-size:14px;font-weight:500;color:var(--text);">🗺 Cadena de tareas</div>
+      <div onclick="closeChainModal()" style="font-size:18px;color:var(--text2);cursor:pointer;padding:2px 6px;">✕</div>
+    </div>
+    <div id="chain-modal-list" style="padding:12px 16px;max-height:400px;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <!-- MODAL RESTAURAR CARRITO -->
 <div id="restore-cart-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="closeRestoreCartModal(event)">
   <div style="background:var(--bg2);border-radius:16px;border:0.5px solid var(--border);width:100%;max-width:340px;overflow:hidden;padding:20px;" onclick="event.stopPropagation()">
@@ -1233,6 +1244,11 @@ function renderTareas() {
                 </div>
                 ${t.veces_completada ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Completada ${t.veces_completada} vez${t.veces_completada>1?'es':''}</div>` : ''}
               </div>` : ''}
+              <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+                <div onclick="derivarTarea('${t.id}','${escapar(t.nombre)}','${t.categoria}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);background:rgba(127,119,221,0.1);border:1px solid rgba(127,119,221,0.3);border-radius:16px;padding:5px 12px;cursor:pointer;">↗ Derivar tarea</div>
+                ${t.parent_id || _getChildren(t.id).length > 0 ? `<div onclick="openChainModal('${t.id}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:5px 12px;cursor:pointer;">🗺 Ver cadena</div>` : ''}
+              </div>
+              ${t.parent_id ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">↑ Originada de: <span style="color:var(--purple);cursor:pointer;" onclick="scrollToTask('${t.parent_id}')">${_getTaskName(t.parent_id)}</span></div>` : ''}
             </div>
           </div>`;
       } else {
@@ -1306,6 +1322,11 @@ function renderTareas() {
                 </div>
                 ${t.veces_completada ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Completada ${t.veces_completada} vez${t.veces_completada>1?'es':''}</div>` : ''}
               </div>` : ''}
+              <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+                <div onclick="derivarTarea('${t.id}','${escapar(t.nombre)}','${t.categoria}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);background:rgba(127,119,221,0.1);border:1px solid rgba(127,119,221,0.3);border-radius:16px;padding:5px 12px;cursor:pointer;">↗ Derivar tarea</div>
+                ${t.parent_id || _getChildren(t.id).length > 0 ? `<div onclick="openChainModal('${t.id}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:5px 12px;cursor:pointer;">🗺 Ver cadena</div>` : ''}
+              </div>
+              ${t.parent_id ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">↑ Originada de: <span style="color:var(--purple);cursor:pointer;" onclick="scrollToTask('${t.parent_id}')">${_getTaskName(t.parent_id)}</span></div>` : ''}
             </div>
           </div>`;
       }
@@ -1556,7 +1577,10 @@ function openNewTask(cat) {
   document.getElementById('task-modal').classList.remove('hidden');
 }
 function openNewRecurrente() { openNewTask('hogar'); }
-function closeTaskModal() { document.getElementById('task-modal').classList.add('hidden'); }
+function closeTaskModal() { 
+  window._derivarParentId = null;
+  document.getElementById('task-modal').classList.add('hidden'); 
+}
 function setTaskCat(cat, el) {
   currentTaskCat = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -1569,17 +1593,19 @@ async function submitTask() {
   const nombre = document.getElementById('task-nombre').value.trim();
   const consideraciones = document.getElementById('task-consideraciones').value.trim();
   if (!nombre) { showToast('Escribe el nombre de la tarea', true); return; }
+  const parentId = window._derivarParentId || null;
+  window._derivarParentId = null;
   try {
     const nueva = await supaFetch('jd_tareas', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ nombre, categoria: currentTaskCat, es_recurrente: false, status: 'pendiente', consideraciones: consideraciones || null })
+      body: JSON.stringify({ nombre, categoria: currentTaskCat, es_recurrente: false, status: 'pendiente', consideraciones: consideraciones || null, parent_id: parentId })
     });
     tareas.push(nueva[0]);
     renderTareas();
     closeTaskModal();
-    showToast('Tarea agregada ✨');
-  } catch(e) { console.error('submitProduct error:', e.message); showToast('Error: ' + e.message.substring(0,50), true); }
+    showToast(parentId ? '↗ Tarea derivada ✨' : 'Tarea agregada ✨');
+  } catch(e) { console.error('submitTask error:', e.message); showToast('Error: ' + e.message.substring(0,50), true); }
 }
 
 // ---- HISTORIAL ----
@@ -2217,6 +2243,104 @@ function formatNotifTime(iso) {
   if (isToday) return `Hoy ${hhmm}`;
   if (isTomorrow) return `Mañana ${hhmm}`;
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) + ' ' + hhmm;
+}
+
+// ---- TRAZABILIDAD DE TAREAS ----
+function _getTaskName(id) {
+  const t = tareas.find(x => x.id === id) || completadas.find(x => x.id === id);
+  return t ? t.nombre : 'Tarea eliminada';
+}
+
+function _getChildren(id) {
+  return tareas.filter(t => t.parent_id === id);
+}
+
+function _getRootId(tarea) {
+  // Sube la cadena hasta encontrar el origen
+  let current = tarea;
+  const visited = new Set();
+  while (current && current.parent_id && !visited.has(current.id)) {
+    visited.add(current.id);
+    current = tareas.find(t => t.id === current.parent_id) || { id: current.parent_id, nombre: _getTaskName(current.parent_id), parent_id: null };
+  }
+  return current;
+}
+
+function _buildChain(id) {
+  // Construir cadena completa desde la raíz
+  const root = _getRootId(tareas.find(t => t.id === id) || { id, parent_id: null });
+  const chain = [];
+  function addNode(nodeId, depth) {
+    const t = tareas.find(x => x.id === nodeId) || completadas.find(x => x.id === nodeId);
+    const name = t ? t.nombre : _getTaskName(nodeId);
+    const status = t ? (completadas.find(x => x.id === nodeId) ? 'completada' : 'pendiente') : 'completada';
+    chain.push({ id: nodeId, nombre: name, status, depth, isCurrent: nodeId === id });
+    const children = tareas.filter(t => t.parent_id === nodeId);
+    children.forEach(c => addNode(c.id, depth + 1));
+  }
+  addNode(root.id, 0);
+  return chain;
+}
+
+function derivarTarea(parentId, parentNombre, categoria) {
+  currentTaskCat = categoria;
+  window._derivarParentId = parentId;
+  document.getElementById('task-nombre').value = parentNombre;
+  document.getElementById('task-modal-title').textContent = 'Derivar tarea';
+  if (document.getElementById('task-consideraciones')) document.getElementById('task-consideraciones').value = '';
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  const idx = ['trabajo','hogar','ideas'].indexOf(categoria);
+  document.querySelectorAll('.cat-btn')[idx]?.classList.add('active');
+  const consGroup = document.getElementById('task-consideraciones-group');
+  if (consGroup) consGroup.style.display = categoria !== 'hogar' ? '' : 'none';
+  document.getElementById('task-modal').classList.remove('hidden');
+  // Seleccionar el texto para que pueda editar fácilmente
+  setTimeout(() => {
+    const input = document.getElementById('task-nombre');
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }, 100);
+}
+
+function openChainModal(id) {
+  const chain = _buildChain(id);
+  const list = document.getElementById('chain-modal-list');
+  list.innerHTML = chain.map((node, i) => {
+    const isLast = i === chain.length - 1;
+    const statusIcon = node.status === 'completada' ? '✅' : '🔵';
+    const isCurrent = node.isCurrent;
+    return `
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+          <div style="font-size:14px;">${statusIcon}</div>
+          ${!isLast ? `<div style="width:1px;height:24px;background:var(--border);margin:2px 0;"></div>` : ''}
+        </div>
+        <div onclick="closeChainModal();scrollToTask('${node.id}')"
+          style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid ${isCurrent ? 'var(--purple)' : 'var(--border)'};background:${isCurrent ? 'rgba(127,119,221,0.08)' : 'var(--bg3)'};cursor:pointer;margin-bottom:${!isLast ? '4px' : '0'};">
+          <div style="font-size:13px;color:${isCurrent ? 'var(--purple)' : 'var(--text)'};font-weight:${isCurrent ? '500' : '400'};">${node.nombre}</div>
+          ${isCurrent ? `<div style="font-size:10px;color:var(--purple);margin-top:2px;">← estás aquí</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('chain-modal').style.display = 'flex';
+}
+
+function closeChainModal(e) {
+  if (e && e.target !== document.getElementById('chain-modal')) return;
+  document.getElementById('chain-modal').style.display = 'none';
+}
+
+function scrollToTask(id) {
+  // Ir a pendientes, expandir la tarea y hacer scroll
+  if (currentFilter === 'dashboard') setFilter('todos', document.querySelector('.fpill'));
+  setTimeout(() => {
+    const el = document.getElementById('task-' + id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const detail = document.getElementById('detail-' + id);
+      if (detail) detail.classList.add('show');
+    }
+  }, 100);
 }
 
 // ---- RESTAURAR CARRITO ----

@@ -2487,8 +2487,10 @@ function pomoRenderUI() {
       `<div style="width:8px;height:8px;border-radius:50%;background:${i < (p.completedRests||0) ? 'var(--teal)' : 'rgba(29,158,117,0.2)'};"></div>`
     ).join('');
     dotsEl.innerHTML = `
-      <div style="display:flex;gap:5px;">${workDots}</div>
-      <div style="display:flex;gap:5px;margin-top:4px;">${restDots}</div>`;
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;gap:5px;">${workDots}</div>
+        <div style="display:flex;gap:5px;">${restDots}</div>
+      </div>`;
   }
 }
 

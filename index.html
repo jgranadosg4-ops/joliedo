@@ -1804,7 +1804,7 @@ function renderDashboard() {
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i<prioritarias.length-1?'border-bottom:0.5px solid var(--border);':''}">
           <div style="width:7px;height:7px;border-radius:50%;background:${catColor[t.categoria]||'#888'};flex-shrink:0;"></div>
           <span style="font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
-          <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:${t.prioridad===1?'#FCEBEB':t.prioridad===2?'#FAEEDA':'rgba(127,119,221,0.15)'};color:${t.prioridad===1?'#A32D2D':t.prioridad===2?'#854F0B':'#7F77DD'};flex-shrink:0;">P${t.prioridad}</span>
+          <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:#FCEBEB;color:#A32D2D;flex-shrink:0;">P${t.prioridad}</span>
           <span style="font-size:11px;color:var(--text2);flex-shrink:0;">${t.avance||0}%</span>
         </div>`).join('')}
     </div>` : ''}

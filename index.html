@@ -1066,14 +1066,16 @@ async function _doFinalizarCompra(palomeados, guardarParaDespues) {
         });
       }
     }
-    // Limpiar estado local
+    // Limpiar estado local completamente
     Object.keys(cart).forEach(id => {
       const el = document.getElementById('ci-' + id);
       if (el) el.classList.remove('gone');
     });
     cart = {}; cartBought = {}; carritoActivoId = null; window._carritosPorTienda = {};
-    renderCart();
+    renderCart(); // mostrar carrito vacío inmediatamente
     if (guardarParaDespues && guardarParaDespues.length > 0) {
+      // Pequeña pausa para que Supabase procese todo antes de recargar
+      await new Promise(r => setTimeout(r, 600));
       await loadCarritoActivo();
       showToast(`🎉 Compra guardada · ${guardarParaDespues.length} producto${guardarParaDespues.length>1?'s':''} guardados para después`);
     } else {

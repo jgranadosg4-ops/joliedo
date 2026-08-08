@@ -367,19 +367,19 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 <div class="screen show" id="screen-pendientes">
 
   <div class="filter-row">
-    <div class="fpill" onclick="setFilter('todos',this)">Todos</div>
+    <div class="fpill on" onclick="setFilter('todos',this)">Todos</div>
     <div class="fpill" onclick="setFilter('trabajo',this)">💼 Trabajo</div>
     <div class="fpill" onclick="setFilter('hogar',this)">🏠 Hogar</div>
     <div class="fpill" onclick="setFilter('ideas',this)">👤 Personal</div>
-    <div class="fpill on" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊 Dashboard</div>
+    <div class="fpill" id="pill-dashboard" onclick="setFilter('dashboard',this)">📊 Dashboard</div>
   </div>
 
   <!-- DASHBOARD (oculto por defecto) -->
-  <div id="dashboard-wrapper" style="display:block;">
+  <div id="dashboard-wrapper" style="display:none;">
     <div id="dashboard-container"></div>
   </div>
 
-  <div id="tareas-wrapper" style="display:none;">
+  <div id="tareas-wrapper">
     <div class="warn-row hidden" id="warn-old">
       <span style="font-size:16px;">⏰</span>
       <div class="warn-txt" id="warn-old-txt">Tienes pendientes con más de 7 días sin hacer</div>
@@ -499,30 +499,20 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
   </div>
 </div>
 
-<!-- MODAL CADENA DE TAREAS -->
-<div id="chain-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="closeChainModal(event)">
-  <div style="background:var(--bg2);border-radius:16px;border:0.5px solid var(--border);width:100%;max-width:360px;overflow:hidden;" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border);">
-      <div style="font-size:14px;font-weight:500;color:var(--text);">🗺 Cadena de tareas</div>
-      <div onclick="closeChainModal()" style="font-size:18px;color:var(--text2);cursor:pointer;padding:2px 6px;">✕</div>
-    </div>
-    <div id="chain-modal-list" style="padding:12px 16px;max-height:400px;overflow-y:auto;"></div>
-  </div>
-</div>
-
-<!-- MODAL RESTAURAR CARRITO -->
-<div id="restore-cart-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="closeRestoreCartModal(event)">
-  <div style="background:var(--bg2);border-radius:16px;border:0.5px solid var(--border);width:100%;max-width:340px;overflow:hidden;padding:20px;" onclick="event.stopPropagation()">
-    <div style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:8px;">↩ Restaurar carrito</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">¿Quieres crear un nuevo carrito con los productos de esta compra?</div>
-    <div style="display:flex;gap:10px;">
-      <div onclick="closeRestoreCartModal()" style="flex:1;padding:10px;background:var(--bg3);border-radius:10px;font-size:13px;color:var(--text2);text-align:center;cursor:pointer;">Cancelar</div>
-      <div onclick="restaurarCarrito()" style="flex:1;padding:10px;background:var(--purple);border-radius:10px;font-size:13px;color:#fff;text-align:center;cursor:pointer;font-weight:500;">Restaurar</div>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL NOTIFICACIONES -->
+<!-- MODAL FINALIZAR COMPRA -->
+<div id="finalizar-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg2);border-radius:16px;border:0.5px solid var(--border);width:100%;max-width:340px;padding:20px;" onclick="event.stopPropagation()">
+    <div style="font-size:16px;font-weight:500;color:var(--text);margin-bottom:8px;">✅ Finalizar compra</div>
+    <div id="finalizar-modal-txt" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div onclick="finalizarGuardando()" style="padding:11px;background:var(--purple);border-radius:10px;font-size:13px;color:#fff;text-align:center;cursor:pointer;font-weight:500;">💾 Guardar para después</div>
+      <div onclick="finalizarEliminando()" style="padding:11px;background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:10px;font-size:13px;color:var(--red);text-align:center;cursor:pointer;">🗑 Eliminar y finalizar</div>
+      <div onclick="closeFinalizarModal()" style="padding:11px;background:var(--bg3);border-radius:10px;font-size:13px;color:var(--text2);text-align:center;cursor:pointer;">Cancelar</div>
+    </div>
+  </div>
+</div>
+
 <div id="notif-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="closeNotifModal(event)">
   <div style="background:var(--bg2);border-radius:16px;border:0.5px solid var(--border);width:100%;max-width:360px;overflow:hidden;" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--border);">
@@ -819,8 +809,6 @@ function renderCatalogo(listOverride) {
     });
     div.addEventListener('click', (e) => {
       if (didLongPress) { didLongPress = false; e.preventDefault(); e.stopPropagation(); return; }
-      // En desktop (no touch) el click es el único evento — agregar al carrito
-      if (!('ontouchstart' in window)) addToCart(p.id, p.emoji, p.nombre);
     });
     div.innerHTML = `<div class="cat-emoji">${p.emoji || '🛒'}</div><div class="cat-name">${p.nombre}</div>`;
     grid.appendChild(div);
@@ -998,22 +986,94 @@ async function removeFromCart(id) {
 async function finalizarCompra() {
   const keys = Object.keys(cart);
   if (keys.length === 0) return;
+
+  const noPalomeados = keys.filter(id => !cartBought[id]);
+  if (noPalomeados.length > 0) {
+    // Mostrar modal de confirmación
+    openFinalizarModal(noPalomeados);
+    return;
+  }
+  await _doFinalizarCompra(keys);
+}
+
+function openFinalizarModal(noPalomeados) {
+  const modal = document.getElementById('finalizar-modal');
+  const txt = document.getElementById('finalizar-modal-txt');
+  if (txt) txt.textContent = `Tienes ${noPalomeados.length} producto${noPalomeados.length > 1 ? 's' : ''} sin comprar. ¿Qué hacemos con ${noPalomeados.length > 1 ? 'ellos' : 'él'}?`;
+  window._finalizarNoPalomeados = noPalomeados;
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFinalizarModal() {
+  document.getElementById('finalizar-modal').style.display = 'none';
+  window._finalizarNoPalomeados = null;
+}
+
+async function finalizarGuardando() {
+  // Guardar los no palomeados en nuevo carrito, finalizar solo los palomeados
+  const noPalomeados = window._finalizarNoPalomeados || [];
+  closeFinalizarModal();
+  const keys = Object.keys(cart);
+  const palomeados = keys.filter(id => cartBought[id]);
+  // Finalizar carrito con solo los palomeados
+  await _doFinalizarCompra(palomeados, noPalomeados);
+}
+
+async function finalizarEliminando() {
+  // Eliminar los no palomeados y finalizar con los palomeados
+  closeFinalizarModal();
+  const keys = Object.keys(cart);
+  const palomeados = keys.filter(id => cartBought[id]);
+  await _doFinalizarCompra(palomeados, []);
+}
+
+async function _doFinalizarCompra(palomeados, guardarParaDespues) {
   try {
-    // Finalizar todos los carritos activos
-    const carritoIds = [...new Set(keys.map(id => cart[id].carritoId).filter(Boolean))];
+    const carritoIds = [...new Set(palomeados.map(id => cart[id]?.carritoId).filter(Boolean))];
     for (const cid of carritoIds) {
       await supaFetch(`jd_carritos?id=eq.${cid}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'finalizado', fecha_finalizada: new Date().toISOString() })
       });
     }
-    keys.forEach(id => {
+    // Si hay items a guardar para después, crear nuevo carrito con ellos
+    if (guardarParaDespues && guardarParaDespues.length > 0) {
+      // Agrupar por tienda
+      const porTienda = {};
+      guardarParaDespues.forEach(id => {
+        const tiendaId = cart[id]?.tiendaId;
+        if (tiendaId) {
+          if (!porTienda[tiendaId]) porTienda[tiendaId] = [];
+          porTienda[tiendaId].push(id);
+        }
+      });
+      for (const [tiendaId, prodIds] of Object.entries(porTienda)) {
+        const nuevoCarrito = await supaFetch('jd_carritos', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({ tienda_id: tiendaId, status: 'activo', fecha_creada: new Date().toISOString() })
+        });
+        const nuevoId = nuevoCarrito[0].id;
+        await fetch(`${SUPABASE_URL}/rest/v1/jd_carrito_items`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(prodIds.map(id => ({ carrito_id: nuevoId, producto_id: id, comprado: false })))
+        });
+      }
+    }
+    // Limpiar estado
+    Object.keys(cart).forEach(id => {
       const el = document.getElementById('ci-' + id);
       if (el) el.classList.remove('gone');
     });
     cart = {}; cartBought = {}; carritoActivoId = null; window._carritosPorTienda = {};
     renderCart();
-    showToast('🎉 ¡Compra guardada en historial!');
+    if (guardarParaDespues && guardarParaDespues.length > 0) {
+      await loadCarritoActivo();
+      showToast(`🎉 Compra guardada · ${guardarParaDespues.length} producto${guardarParaDespues.length>1?'s':''} guardados para después`);
+    } else {
+      showToast('🎉 ¡Compra guardada en historial!');
+    }
   } catch(e) { showToast('Error al finalizar compra', true); }
 }
 
@@ -1244,11 +1304,6 @@ function renderTareas() {
                 </div>
                 ${t.veces_completada ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Completada ${t.veces_completada} vez${t.veces_completada>1?'es':''}</div>` : ''}
               </div>` : ''}
-              <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
-                <div onclick="derivarTarea('${t.id}','${escapar(t.nombre)}','${t.categoria}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);background:rgba(127,119,221,0.1);border:1px solid rgba(127,119,221,0.3);border-radius:16px;padding:5px 12px;cursor:pointer;">↗ Derivar tarea</div>
-                ${t.parent_id || _getChildren(t.id).length > 0 ? `<div onclick="openChainModal('${t.id}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:5px 12px;cursor:pointer;">🗺 Ver cadena</div>` : ''}
-              </div>
-              ${t.parent_id ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">↑ Originada de: <span style="color:var(--purple);cursor:pointer;" onclick="scrollToTask('${t.parent_id}')">${_getTaskName(t.parent_id)}</span></div>` : ''}
             </div>
           </div>`;
       } else {
@@ -1322,11 +1377,6 @@ function renderTareas() {
                 </div>
                 ${t.veces_completada ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Completada ${t.veces_completada} vez${t.veces_completada>1?'es':''}</div>` : ''}
               </div>` : ''}
-              <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
-                <div onclick="derivarTarea('${t.id}','${escapar(t.nombre)}','${t.categoria}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--purple);background:rgba(127,119,221,0.1);border:1px solid rgba(127,119,221,0.3);border-radius:16px;padding:5px 12px;cursor:pointer;">↗ Derivar tarea</div>
-                ${t.parent_id || _getChildren(t.id).length > 0 ? `<div onclick="openChainModal('${t.id}')" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:5px 12px;cursor:pointer;">🗺 Ver cadena</div>` : ''}
-              </div>
-              ${t.parent_id ? `<div style="font-size:11px;color:var(--text2);margin-top:6px;">↑ Originada de: <span style="color:var(--purple);cursor:pointer;" onclick="scrollToTask('${t.parent_id}')">${_getTaskName(t.parent_id)}</span></div>` : ''}
             </div>
           </div>`;
       }
@@ -1577,10 +1627,7 @@ function openNewTask(cat) {
   document.getElementById('task-modal').classList.remove('hidden');
 }
 function openNewRecurrente() { openNewTask('hogar'); }
-function closeTaskModal() { 
-  window._derivarParentId = null;
-  document.getElementById('task-modal').classList.add('hidden'); 
-}
+function closeTaskModal() { document.getElementById('task-modal').classList.add('hidden'); }
 function setTaskCat(cat, el) {
   currentTaskCat = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -1593,19 +1640,17 @@ async function submitTask() {
   const nombre = document.getElementById('task-nombre').value.trim();
   const consideraciones = document.getElementById('task-consideraciones').value.trim();
   if (!nombre) { showToast('Escribe el nombre de la tarea', true); return; }
-  const parentId = window._derivarParentId || null;
-  window._derivarParentId = null;
   try {
     const nueva = await supaFetch('jd_tareas', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ nombre, categoria: currentTaskCat, es_recurrente: false, status: 'pendiente', consideraciones: consideraciones || null, parent_id: parentId })
+      body: JSON.stringify({ nombre, categoria: currentTaskCat, es_recurrente: false, status: 'pendiente', consideraciones: consideraciones || null })
     });
     tareas.push(nueva[0]);
     renderTareas();
     closeTaskModal();
-    showToast(parentId ? '↗ Tarea derivada ✨' : 'Tarea agregada ✨');
-  } catch(e) { console.error('submitTask error:', e.message); showToast('Error: ' + e.message.substring(0,50), true); }
+    showToast('Tarea agregada ✨');
+  } catch(e) { console.error('submitProduct error:', e.message); showToast('Error: ' + e.message.substring(0,50), true); }
 }
 
 // ---- HISTORIAL ----
@@ -1694,7 +1739,6 @@ async function loadHistorialCompras() {
             <div class="hist-items-grid">
               ${citems.map(i => `<div class="hist-item"><div class="hist-emoji">${i.jd_productos?.emoji||'🛒'}</div><div class="hist-name">${i.jd_productos?.nombre||''}</div></div>`).join('')}
             </div>
-            <div onclick="confirmarRestaurarCarrito('${carrito.tienda_id}','${carrito.id}')" style="margin-top:8px;padding:7px 12px;background:rgba(127,119,221,0.08);border:1px solid rgba(127,119,221,0.25);border-radius:10px;font-size:12px;color:var(--purple);text-align:center;cursor:pointer;">↩ Restaurar este carrito</div>
           </div>`;
         }).join('');
     }).join('');
@@ -1714,7 +1758,7 @@ function renderDashboard() {
   const pendientes = tareas.filter(t => t.status === 'pendiente');
   const conPrioridad = pendientes.filter(t => t.prioridad);
   const atrasadas = pendientes.filter(t => t.fecha_creada && new Date(t.fecha_creada) <= weekAgo);
-  const prioritarias = pendientes.filter(t => t.prioridad >= 1 && t.prioridad <= 3)
+  const prioritarias = pendientes.filter(t => t.prioridad === 1 || t.prioridad === 2)
     .sort((a,b) => (a.prioridad||9) - (b.prioridad||9)).slice(0, 5);
   const recordatorios = tareas.filter(t => t.notificar_en && new Date(t.notificar_en) > now && t.status === 'pendiente')
     .sort((a,b) => new Date(a.notificar_en) - new Date(b.notificar_en)).slice(0, 3);
@@ -1830,7 +1874,7 @@ function renderDashboard() {
         <div style="display:flex;align-items:center;gap:8px;padding:8px 0;${i<prioritarias.length-1?'border-bottom:0.5px solid var(--border);':''}">
           <div style="width:7px;height:7px;border-radius:50%;background:${catColor[t.categoria]||'#888'};flex-shrink:0;"></div>
           <span style="font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
-          <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:#FCEBEB;color:#A32D2D;flex-shrink:0;">P${t.prioridad}</span>
+          <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:6px;background:${t.prioridad===1?'#FCEBEB':'#FAEEDA'};color:${t.prioridad===1?'#A32D2D':'#854F0B'};flex-shrink:0;">P${t.prioridad}</span>
           <span style="font-size:11px;color:var(--text2);flex-shrink:0;">${t.avance||0}%</span>
         </div>`).join('')}
     </div>` : ''}
@@ -2245,211 +2289,6 @@ function formatNotifTime(iso) {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) + ' ' + hhmm;
 }
 
-// ---- TRAZABILIDAD DE TAREAS ----
-function _getTaskName(id) {
-  const t = tareas.find(x => x.id === id) || completadas.find(x => x.id === id);
-  return t ? t.nombre : 'Tarea eliminada';
-}
-
-function _getChildren(id) {
-  return tareas.filter(t => t.parent_id === id);
-}
-
-function _getRootId(tarea) {
-  // Sube la cadena hasta encontrar el origen
-  let current = tarea;
-  const visited = new Set();
-  while (current && current.parent_id && !visited.has(current.id)) {
-    visited.add(current.id);
-    current = tareas.find(t => t.id === current.parent_id) || { id: current.parent_id, nombre: _getTaskName(current.parent_id), parent_id: null };
-  }
-  return current;
-}
-
-function _buildChain(id) {
-  // Construir cadena completa desde la raíz
-  const root = _getRootId(tareas.find(t => t.id === id) || { id, parent_id: null });
-  const chain = [];
-  function addNode(nodeId, depth) {
-    const t = tareas.find(x => x.id === nodeId) || completadas.find(x => x.id === nodeId);
-    const name = t ? t.nombre : _getTaskName(nodeId);
-    const status = t ? (completadas.find(x => x.id === nodeId) ? 'completada' : 'pendiente') : 'completada';
-    chain.push({ id: nodeId, nombre: name, status, depth, isCurrent: nodeId === id });
-    const children = tareas.filter(t => t.parent_id === nodeId);
-    children.forEach(c => addNode(c.id, depth + 1));
-  }
-  addNode(root.id, 0);
-  return chain;
-}
-
-function derivarTarea(parentId, parentNombre, categoria) {
-  currentTaskCat = categoria;
-  window._derivarParentId = parentId;
-  document.getElementById('task-nombre').value = parentNombre;
-  document.getElementById('task-modal-title').textContent = 'Derivar tarea';
-  if (document.getElementById('task-consideraciones')) document.getElementById('task-consideraciones').value = '';
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-  const idx = ['trabajo','hogar','ideas'].indexOf(categoria);
-  document.querySelectorAll('.cat-btn')[idx]?.classList.add('active');
-  const consGroup = document.getElementById('task-consideraciones-group');
-  if (consGroup) consGroup.style.display = categoria !== 'hogar' ? '' : 'none';
-  document.getElementById('task-modal').classList.remove('hidden');
-  // Seleccionar el texto para que pueda editar fácilmente
-  setTimeout(() => {
-    const input = document.getElementById('task-nombre');
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
-  }, 100);
-}
-
-function openChainModal(id) {
-  const chain = _buildChain(id);
-  const list = document.getElementById('chain-modal-list');
-
-  function renderChain(selectedId) {
-    const catLabel = { trabajo: '💼 Trabajo', hogar: '🏠 Hogar', ideas: '👤 Personal' };
-    list.innerHTML = chain.map((node, i) => {
-      const isLast = i === chain.length - 1;
-      const statusIcon = node.status === 'completada' ? '✅' : '🔵';
-      const isCurrent = node.isCurrent;
-      const isSelected = node.id === selectedId;
-      const t = tareas.find(x => x.id === node.id) || completadas.find(x => x.id === node.id);
-      return `
-        <div style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="display:flex;flex-direction:column;align-items:center;">
-            <div style="font-size:14px;">${statusIcon}</div>
-            ${!isLast ? `<div style="width:1px;height:${isSelected && t ? '80px' : '24px'};background:var(--border);margin:2px 0;transition:height 0.3s;"></div>` : ''}
-          </div>
-          <div style="flex:1;margin-bottom:${!isLast ? '4px' : '0'};">
-            <div onclick="renderChainNode('${node.id}')"
-              style="padding:8px 10px;border-radius:10px;border:1px solid ${isCurrent ? 'var(--purple)' : isSelected ? 'var(--border)' : 'var(--border)'};background:${isCurrent ? 'rgba(127,119,221,0.08)' : isSelected ? 'var(--bg2)' : 'var(--bg3)'};cursor:pointer;">
-              <div style="font-size:13px;color:${isCurrent ? 'var(--purple)' : 'var(--text)'};font-weight:${isCurrent ? '500' : '400'};">${node.nombre}</div>
-              ${isCurrent ? `<div style="font-size:10px;color:var(--purple);margin-top:2px;">← estás aquí</div>` : ''}
-            </div>
-            ${isSelected && t ? `
-            <div style="margin-top:6px;padding:10px 12px;background:var(--bg2);border-radius:10px;border:0.5px solid var(--border);">
-              <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">${catLabel[t.categoria]||''} · ${node.status === 'completada' ? '✅ Completada' : '🔵 Pendiente'}</div>
-              ${t.avance !== undefined ? `<div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Avance: ${t.avance||0}%</div>` : ''}
-              ${t.consideraciones ? `<div style="font-size:12px;color:var(--text);line-height:1.4;">${t.consideraciones}</div>` : '<div style="font-size:12px;color:var(--text2);">Sin consideraciones</div>'}
-            </div>` : ''}
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  window.renderChainNode = function(nodeId) {
-    renderChain(nodeId);
-  };
-
-  renderChain(null);
-  document.getElementById('chain-modal').style.display = 'flex';
-}
-
-function closeChainModal(e) {
-  if (e && e.target !== document.getElementById('chain-modal')) return;
-  document.getElementById('chain-modal').style.display = 'none';
-}
-
-function scrollToTask(id) {
-  const enPendientes = tareas.find(t => t.id === id);
-  if (enPendientes) {
-    // Ir a pendientes y hacer scroll
-    if (currentFilter === 'dashboard') setFilter('todos', document.querySelectorAll('.fpill')[0]);
-    setTimeout(() => {
-      const el = document.getElementById('task-' + id);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const detail = document.getElementById('detail-' + id);
-        if (detail) detail.classList.add('show');
-      }
-    }, 100);
-  } else {
-    // Está en completadas — ir a Pendientes > sección completadas
-    if (currentFilter === 'dashboard') setFilter('todos', document.querySelectorAll('.fpill')[0]);
-    setTimeout(() => {
-      const secComp = document.getElementById('sec-completadas');
-      if (secComp) {
-        secComp.classList.remove('hidden');
-        const body = document.getElementById('body-completadas');
-        if (body) body.classList.remove('hidden');
-        secComp.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Abrir el detalle de esa tarea completada
-        setTimeout(() => {
-          const compDetail = document.getElementById('comp-detail-' + id);
-          if (compDetail) compDetail.classList.add('show');
-          const compEl = document.getElementById('comp-' + id);
-          if (compEl) compEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 400);
-      }
-    }, 100);
-  }
-}
-
-// ---- RESTAURAR CARRITO ----
-let _restoreCartData = null;
-
-function confirmarRestaurarCarrito(tiendaId, carritoId) {
-  _restoreCartData = { tiendaId, carritoId };
-  document.getElementById('restore-cart-modal').style.display = 'flex';
-}
-
-function closeRestoreCartModal(e) {
-  if (e && e.target !== document.getElementById('restore-cart-modal')) return;
-  document.getElementById('restore-cart-modal').style.display = 'none';
-  _restoreCartData = null;
-}
-
-async function restaurarCarrito() {
-  document.getElementById('restore-cart-modal').style.display = 'none';
-  if (!_restoreCartData) return;
-  const { tiendaId, carritoId } = _restoreCartData;
-  _restoreCartData = null;
-  try {
-    // Obtener items del carrito original
-    const items = await supaFetch(`jd_carrito_items?carrito_id=eq.${carritoId}&select=producto_id`);
-    if (!items || items.length === 0) { showToast('No hay items para restaurar', true); return; }
-
-    let targetCarritoId = carritoActivoId;
-
-    // Si no hay carrito activo, crear uno nuevo
-    if (!targetCarritoId) {
-      const nuevoCarrito = await supaFetch('jd_carritos', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ tienda_id: tiendaId, status: 'activo', fecha_creada: new Date().toISOString() })
-      });
-      targetCarritoId = nuevoCarrito[0].id;
-    }
-
-    // Agregar items al carrito activo (evitar duplicados)
-    const existentes = carritoActivoId ? Object.keys(cart) : [];
-    const nuevosItems = items
-      .filter(i => !existentes.includes(i.producto_id))
-      .map(i => ({ carrito_id: targetCarritoId, producto_id: i.producto_id, comprado: false }));
-
-    if (nuevosItems.length === 0) {
-      showToast('Todos los productos ya están en el carrito');
-      return;
-    }
-
-    await fetch(`${SUPABASE_URL}/rest/v1/jd_carrito_items`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(nuevosItems)
-    });
-
-    await loadCarritoActivo();
-    setTab('compras', document.querySelectorAll('.tab')[1]);
-    showToast(`↩ ${nuevosItems.length} productos agregados al carrito`);
-  } catch(e) {
-    showToast('Error al restaurar: ' + e.message.substring(0,40), true);
-  }
-}
-
 // ---- SEGUIMIENTO RECURRENTE ----
 async function toggleRecurrenciaTask(id, toggleEl) {
   const tarea = tareas.find(t => t.id === id);
@@ -2563,7 +2402,6 @@ function playPomoSound() {
 // ---- POMODORO ----
 const POMO_WORK = 25 * 60;
 const POMO_REST = 5 * 60;
-const POMO_LONG_REST = 15 * 60;
 let pomoState = {
   running: false,
   isRest: false,
@@ -2578,9 +2416,12 @@ function pomoSave() {
   localStorage.setItem('pomo', JSON.stringify({
     running: s.running,
     isRest: s.isRest,
+    isLongRest: s.isLongRest || false,
     session: s.session,
+    completedRests: s.completedRests || 0,
     savedAt: Date.now(),
-    secondsAtSave: s.seconds
+    secondsAtSave: s.seconds,
+    startedAt: s.startedAt || null
   }));
 }
 
@@ -2589,29 +2430,47 @@ function pomoRestore() {
     const raw = localStorage.getItem('pomo');
     if (!raw) return;
     const saved = JSON.parse(raw);
-    const elapsed = Math.floor((Date.now() - saved.savedAt) / 1000);
-    const total = saved.isRest ? POMO_REST : POMO_WORK;
-    let seconds = saved.secondsAtSave - (saved.running ? elapsed : 0);
+    // Si estaba corriendo, calcular tiempo real transcurrido desde startedAt
+    let seconds = saved.secondsAtSave;
+    if (saved.running && saved.startedAt) {
+      const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
+      seconds = Math.max(0, saved.secondsAtSave - elapsed);
+    }
     // Avanzar fases si pasó mucho tiempo
+    let isRest = saved.isRest;
+    let isLongRest = saved.isLongRest || false;
+    let session = saved.session || 1;
+    let completedRests = saved.completedRests || 0;
     while (seconds <= 0) {
-      if (!saved.isRest) {
-        saved.isRest = true;
-        seconds += POMO_REST;
+      if (!isRest) {
+        completedRests++;
+        isRest = true;
+        if (session >= 4) {
+          isLongRest = true;
+          seconds += POMO_LONG_REST;
+        } else {
+          isLongRest = false;
+          seconds += POMO_REST;
+        }
       } else {
-        saved.isRest = false;
-        saved.session = Math.min((saved.session || 1) + 1, 4);
+        isRest = false;
+        isLongRest = false;
+        session = Math.min(session + 1, 4);
         seconds += POMO_WORK;
       }
     }
-    pomoState.isRest = saved.isRest;
-    pomoState.session = saved.session || 1;
+    pomoState.isRest = isRest;
+    pomoState.isLongRest = isLongRest;
+    pomoState.session = session;
+    pomoState.completedRests = completedRests;
     pomoState.seconds = Math.max(0, seconds);
+    pomoState.secondsAtStart = Math.max(0, seconds);
     pomoState.running = false;
     // Si estaba corriendo al cerrar, reanudar automáticamente
     if (saved.running && seconds > 0) {
       setTimeout(() => {
         if (!pomoState.running) togglePomo();
-      }, 500); // esperar a que el UI esté listo
+      }, 500);
     }
   } catch(e) {}
 }
@@ -2654,30 +2513,21 @@ function pomoRenderUI() {
   document.getElementById('pomo-ring-time').style.color = isRest ? 'var(--teal)' : 'var(--text)';
 
   // Phase info
-  const isLongRest = p.isLongRest;
-  document.getElementById('pomo-phase-name').textContent = isRest ? (isLongRest ? '🛋️ Descanso largo' : '☕ Descanso') : '🍅 Enfoque';
+  document.getElementById('pomo-phase-name').textContent = isRest ? '☕ Descanso' : '🍅 Enfoque';
   document.getElementById('pomo-phase-name').style.color = isRest ? 'var(--teal)' : 'var(--text)';
-  document.getElementById('pomo-phase-sub').textContent = isLongRest ? '15 min — ¡4 sesiones!' : `Sesión ${p.session} de ${p.totalSessions}`;
+  document.getElementById('pomo-phase-sub').textContent = `Sesión ${p.session} de ${p.totalSessions}`;
 
   // Main button
   const btn = document.getElementById('pomo-btn-main');
   btn.textContent = p.running ? '⏸ Pausar' : (p.seconds < total ? '▶ Reanudar' : '▶ Iniciar');
   btn.classList.toggle('rest', isRest);
 
-  // Dots — hilera morada (enfoques) + hilera verde (descansos)
+  // Dots
   const dotsEl = document.getElementById('pomo-dots');
   if (dotsEl) {
-    const workDots = Array.from({length: p.totalSessions}, (_, i) =>
-      `<div class="pomo-dot${(i < p.session - 1 || (i === p.session - 1 && isRest)) ? ' done' : ''}"></div>`
+    dotsEl.innerHTML = Array.from({length: p.totalSessions}, (_, i) =>
+      `<div class="pomo-dot${i < p.session - 1 ? ' done' : ''}"></div>`
     ).join('');
-    const restDots = Array.from({length: p.totalSessions}, (_, i) =>
-      `<div style="width:8px;height:8px;border-radius:50%;background:${i < (p.completedRests||0) ? 'var(--teal)' : 'rgba(29,158,117,0.2)'};"></div>`
-    ).join('');
-    dotsEl.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:5px;">
-        <div style="display:flex;gap:5px;">${workDots}</div>
-        <div style="display:flex;gap:5px;">${restDots}</div>
-      </div>`;
   }
 }
 
@@ -2686,20 +2536,27 @@ function togglePomo() {
   if (p.running) {
     clearInterval(p.interval);
     p.running = false;
+    p.startedAt = null;
+    p.secondsAtStart = p.seconds;
   } else {
     p.running = true;
+    p.startedAt = Date.now();
+    p.secondsAtStart = p.seconds;
     p.interval = setInterval(() => {
-      p.seconds--;
+      const elapsed = Math.floor((Date.now() - p.startedAt) / 1000);
+      p.seconds = Math.max(0, p.secondsAtStart - elapsed);
       pomoSave();
       if (p.seconds <= 0) {
         clearInterval(p.interval);
         p.running = false;
+        p.startedAt = null;
         pomoPhaseEnd();
         return;
       }
       pomoRenderUI();
-    }, 1000);
+    }, 500); // tick cada 500ms para mayor precisión
   }
+  pomoSave();
   pomoRenderUI();
 }
 
@@ -2707,35 +2564,15 @@ function pomoPhaseEnd() {
   const p = pomoState;
   if (p.isRest) {
     // Fin del descanso → siguiente sesión de trabajo
-    if (p.session >= p.totalSessions && p.isLongRest) {
-      // Fin del descanso largo → resetear ciclo completo
-      p.session = 1;
-      p.isRest = false;
-      p.isLongRest = false;
-      p.seconds = POMO_WORK;
-      p.completedRests = 0;
-      pomoNotify('🍅 ¡Nuevo ciclo!', 'Sesión 1 de 4 — ¡Arranca!');
-    } else {
-      p.session = Math.min(p.session + 1, p.totalSessions);
-      p.isRest = false;
-      p.isLongRest = false;
-      p.seconds = POMO_WORK;
-      pomoNotify('🍅 ¡A trabajar!', `Sesión ${p.session} de ${p.totalSessions} — 25 minutos`);
-    }
+    p.session = Math.min(p.session + 1, p.totalSessions);
+    p.isRest = false;
+    p.seconds = POMO_WORK;
+    pomoNotify('🍅 ¡A trabajar!', `Sesión ${p.session} de ${p.totalSessions} — 25 minutos`);
   } else {
-    // Fin del trabajo
-    p.completedRests = (p.completedRests || 0) + 1;
+    // Fin del trabajo → descanso
     p.isRest = true;
-    if (p.session >= p.totalSessions) {
-      // Descanso largo tras la 4ta sesión
-      p.isLongRest = true;
-      p.seconds = POMO_LONG_REST;
-      pomoNotify('🛋️ ¡Descansa bien!', '15 minutos — completaste 4 sesiones!');
-    } else {
-      p.isLongRest = false;
-      p.seconds = POMO_REST;
-      pomoNotify('☕ ¡Descansa!', '5 minutos de pausa');
-    }
+    p.seconds = POMO_REST;
+    pomoNotify('☕ ¡Descansa!', '5 minutos de pausa');
   }
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   playPomoSound();
@@ -2902,7 +2739,6 @@ async function init() {
   pomoRenderUI();
   updateBellBadge();
   scheduleTaskNotifications();
-  renderDashboard();
 }
 
 init();

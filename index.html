@@ -900,14 +900,13 @@ async function toggleBought(id) {
 
 async function loadCarritoActivo() {
   try {
-    const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc');
+    const carritos = await supaFetch('jd_carritos?status=eq.activo&order=fecha_creada.desc&limit=5');
     if (!carritos || carritos.length === 0) return;
     const carritoIds = carritos.map(c => c.id);
     const items = await supaFetch(`jd_carrito_items?carrito_id=in.(${carritoIds.join(',')})&select=*,jd_productos(nombre,emoji)`);
     if (!items || items.length === 0) return;
     const carritoTienda = {};
     carritos.forEach(c => { carritoTienda[c.id] = c.tienda_id; });
-    // Mapa de carritoId por tienda
     const carritosPorTienda = {};
     carritos.forEach(c => { carritosPorTienda[c.tienda_id] = c.id; });
     items.forEach(item => {
@@ -923,14 +922,11 @@ async function loadCarritoActivo() {
       };
       cartBought[item.producto_id] = item.comprado || false;
     });
-    // Setear en 'todas' para mostrar todo el carrito
     currentTiendaId = 'todas';
     document.getElementById('store-label').textContent = 'Todas';
     setTimeout(renderStoreChips, 100);
-    // Colapsar catálogo
     document.getElementById('body-catalogo')?.classList.add('hidden');
     document.getElementById('chev-catalogo')?.classList.remove('open');
-    // Guardar mapa de carritos por tienda para reutilizar
     window._carritosPorTienda = carritosPorTienda;
     renderCart();
     if (Object.keys(cart).length > 0) showToast('🛒 Carrito restaurado');

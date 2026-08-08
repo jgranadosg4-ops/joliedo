@@ -1029,6 +1029,12 @@ async function finalizarEliminando() {
 
 async function _doFinalizarCompra(palomeados, guardarParaDespues) {
   try {
+    // Primero eliminar de Supabase los items NO palomeados del carrito original
+    const noPalomeadosIds = (guardarParaDespues || []).map(id => cart[id]?.itemId).filter(Boolean);
+    for (const itemId of noPalomeadosIds) {
+      await supaFetch(`jd_carrito_items?id=eq.${itemId}`, { method: 'DELETE' });
+    }
+    // Finalizar los carritos que tienen items palomeados
     const carritoIds = [...new Set(palomeados.map(id => cart[id]?.carritoId).filter(Boolean))];
     for (const cid of carritoIds) {
       await supaFetch(`jd_carritos?id=eq.${cid}`, {
@@ -1038,7 +1044,6 @@ async function _doFinalizarCompra(palomeados, guardarParaDespues) {
     }
     // Si hay items a guardar para después, crear nuevo carrito con ellos
     if (guardarParaDespues && guardarParaDespues.length > 0) {
-      // Agrupar por tienda
       const porTienda = {};
       guardarParaDespues.forEach(id => {
         const tiendaId = cart[id]?.tiendaId;
@@ -1061,7 +1066,7 @@ async function _doFinalizarCompra(palomeados, guardarParaDespues) {
         });
       }
     }
-    // Limpiar estado
+    // Limpiar estado local
     Object.keys(cart).forEach(id => {
       const el = document.getElementById('ci-' + id);
       if (el) el.classList.remove('gone');

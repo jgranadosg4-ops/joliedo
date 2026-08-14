@@ -2516,21 +2516,33 @@ function pomoRenderUI() {
   document.getElementById('pomo-ring-time').style.color = isRest ? 'var(--teal)' : 'var(--text)';
 
   // Phase info
-  document.getElementById('pomo-phase-name').textContent = isRest ? '☕ Descanso' : '🍅 Enfoque';
+  const isLongRest = p.isLongRest || false;
+  document.getElementById('pomo-phase-name').textContent = isRest ? (isLongRest ? '🛋️ Descanso largo' : '☕ Descanso') : '🍅 Enfoque';
   document.getElementById('pomo-phase-name').style.color = isRest ? 'var(--teal)' : 'var(--text)';
-  document.getElementById('pomo-phase-sub').textContent = `Sesión ${p.session} de ${p.totalSessions}`;
+  document.getElementById('pomo-phase-sub').textContent = isLongRest ? '15 min — ¡4 sesiones!' : `Sesión ${p.session} de ${p.totalSessions}`;
 
   // Main button
   const btn = document.getElementById('pomo-btn-main');
-  btn.textContent = p.running ? '⏸ Pausar' : (p.seconds < total ? '▶ Reanudar' : '▶ Iniciar');
+  const totalTime = isRest ? (isLongRest ? POMO_LONG_REST : POMO_REST) : POMO_WORK;
+  btn.textContent = p.running ? '⏸ Pausar' : (p.seconds < totalTime ? '▶ Reanudar' : '▶ Iniciar');
   btn.classList.toggle('rest', isRest);
 
-  // Dots
+  // Dots — hilera morada (enfoques) + hilera verde (descansos)
   const dotsEl = document.getElementById('pomo-dots');
   if (dotsEl) {
-    dotsEl.innerHTML = Array.from({length: p.totalSessions}, (_, i) =>
-      `<div class="pomo-dot${i < p.session - 1 ? ' done' : ''}"></div>`
+    const completedWork = isRest ? p.session : p.session - 1;
+    const completedRests = p.completedRests || 0;
+    const workDots = Array.from({length: p.totalSessions}, (_, i) =>
+      `<div class="pomo-dot${i < completedWork ? ' done' : ''}"></div>`
     ).join('');
+    const restDots = Array.from({length: p.totalSessions}, (_, i) =>
+      `<div style="width:8px;height:8px;border-radius:50%;background:${i < completedRests ? 'var(--teal)' : 'rgba(29,158,117,0.2)'};"></div>`
+    ).join('');
+    dotsEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;gap:5px;">${workDots}</div>
+        <div style="display:flex;gap:5px;">${restDots}</div>
+      </div>`;
   }
 }
 
@@ -2566,17 +2578,38 @@ function togglePomo() {
 function pomoPhaseEnd() {
   const p = pomoState;
   if (p.isRest) {
-    // Fin del descanso → siguiente sesión de trabajo
-    p.session = Math.min(p.session + 1, p.totalSessions);
-    p.isRest = false;
-    p.seconds = POMO_WORK;
-    pomoNotify('🍅 ¡A trabajar!', `Sesión ${p.session} de ${p.totalSessions} — 25 minutos`);
+    if (p.isLongRest) {
+      // Fin del descanso largo → resetear ciclo completo
+      p.session = 1;
+      p.isRest = false;
+      p.isLongRest = false;
+      p.seconds = POMO_WORK;
+      p.completedRests = 0;
+      pomoNotify('🍅 ¡Nuevo ciclo!', 'Sesión 1 de 4 — ¡Arranca!');
+    } else {
+      // Fin del descanso corto → siguiente sesión
+      p.session = Math.min(p.session + 1, p.totalSessions);
+      p.isRest = false;
+      p.isLongRest = false;
+      p.seconds = POMO_WORK;
+      pomoNotify('🍅 ¡A trabajar!', `Sesión ${p.session} de ${p.totalSessions} — 25 minutos`);
+    }
   } else {
-    // Fin del trabajo → descanso
+    // Fin del trabajo
+    p.completedRests = (p.completedRests || 0) + 1;
     p.isRest = true;
-    p.seconds = POMO_REST;
-    pomoNotify('☕ ¡Descansa!', '5 minutos de pausa');
+    if (p.session >= p.totalSessions) {
+      p.isLongRest = true;
+      p.seconds = POMO_LONG_REST;
+      pomoNotify('🛋️ ¡Descansa bien!', '15 minutos — completaste 4 sesiones!');
+    } else {
+      p.isLongRest = false;
+      p.seconds = POMO_REST;
+      pomoNotify('☕ ¡Descansa!', '5 minutos de pausa');
+    }
   }
+  p.secondsAtStart = p.seconds;
+  p.startedAt = null;
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   playPomoSound();
   pomoSave();
